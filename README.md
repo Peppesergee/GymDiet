@@ -28,8 +28,10 @@ scegli **GitHub Actions**: da lì in poi il workflow `.github/workflows/deploy-p
 ogni push. In alternativa scegli **Deploy from a branch**, indica il branch e la cartella `/ (root)`:
 in questo caso il workflow non serve. L'indirizzo sarà `https://<utente>.github.io/GymDiet/`.
 
-> Il passaggio dai Settings è obbligatorio: il token dei workflow non può creare il sito Pages
-> (`Create Pages site failed: Resource not accessible by integration`).
+> Due dettagli scoperti sul campo: il token dei workflow non può creare il sito Pages
+> (`Create Pages site failed: Resource not accessible by integration`), quindi il passaggio dai
+> Settings va fatto a mano una volta; e l'ambiente `github-pages` creato da GitHub accetta deploy
+> **solo dal branch predefinito**, per questo il workflow parte da `main`.
 
 **Opzione B — in locale.** Serve un server HTTP qualsiasi (i moduli ES non funzionano da `file://`):
 
