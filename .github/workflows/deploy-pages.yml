@@ -24,11 +24,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Configura (e attiva) GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          # attiva Pages con build type "GitHub Actions" senza passare dai Settings
-          enablement: true
+      # Richiede che Pages sia gia' attivo con Source = "GitHub Actions"
+      # (Settings -> Pages). Il token del workflow non ha i permessi per
+      # crearlo da solo: "Resource not accessible by integration".
+      - uses: actions/configure-pages@v5
       - name: Carica il sito statico
         uses: actions/upload-pages-artifact@v3
         with:

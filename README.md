@@ -23,10 +23,13 @@ Si installa sulla schermata Home dell'iPhone e funziona anche **offline**.
 
 Il progetto è un sito statico: nessuna build, nessuna dipendenza.
 
-**Opzione A — GitHub Pages (consigliata).** Il workflow `.github/workflows/deploy-pages.yml`
-pubblica il sito a ogni push e **attiva Pages da solo** (`enablement: true`), quindi non serve
-toccare i Settings. Richiede solo che il repository sia pubblico (oppure un piano GitHub a pagamento).
-L'indirizzo sarà `https://<utente>.github.io/GymDiet/`.
+**Opzione A — GitHub Pages.** Una volta sola, in *Settings → Pages → Build and deployment → Source*
+scegli **GitHub Actions**: da lì in poi il workflow `.github/workflows/deploy-pages.yml` pubblica a
+ogni push. In alternativa scegli **Deploy from a branch**, indica il branch e la cartella `/ (root)`:
+in questo caso il workflow non serve. L'indirizzo sarà `https://<utente>.github.io/GymDiet/`.
+
+> Il passaggio dai Settings è obbligatorio: il token dei workflow non può creare il sito Pages
+> (`Create Pages site failed: Resource not accessible by integration`).
 
 **Opzione B — in locale.** Serve un server HTTP qualsiasi (i moduli ES non funzionano da `file://`):
 
