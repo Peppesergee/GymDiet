@@ -1,5 +1,5 @@
 // Service worker: l'app funziona anche offline.
-const CACHE = 'gymdiet-v1';
+const CACHE = 'gymdiet-v2';
 const RISORSE = [
   './',
   './index.html',

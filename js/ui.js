@@ -123,18 +123,44 @@ export function select(valore, opzioni, onChange) {
 
 export function chips(valoreAttivo, opzioni, onChange, multiplo = false) {
   const box = h('div', { class: 'chip-gruppo' });
+  const bottoni = [];
+  // la selezione vive qui dentro: i chip si aggiornano da soli a ogni tocco,
+  // senza dipendere da un ridisegno della vista che li contiene
+  let selezione = multiplo ? [...(valoreAttivo || [])] : valoreAttivo;
+
+  const evidenzia = () => {
+    for (const { id, elemento } of bottoni) {
+      const attivo = multiplo
+        ? selezione.some(x => String(x) === String(id))
+        : String(selezione) === String(id);
+      elemento.classList.toggle('attivo', attivo);
+      elemento.setAttribute('aria-pressed', attivo ? 'true' : 'false');
+    }
+  };
+
   for (const o of opzioni) {
-    const attivo = multiplo ? (valoreAttivo || []).includes(o.id) : String(valoreAttivo) === String(o.id);
-    box.appendChild(h('button', {
-      type: 'button', class: 'chip' + (attivo ? ' attivo' : ''), testo: o.nome,
+    const elemento = h('button', {
+      type: 'button', class: 'chip', testo: o.nome,
       onclick: () => {
-        if (!multiplo) return onChange(o.id);
-        const set = new Set(valoreAttivo || []);
-        set.has(o.id) ? set.delete(o.id) : set.add(o.id);
-        onChange([...set]);
+        if (multiplo) {
+          selezione = selezione.some(x => String(x) === String(o.id))
+            ? selezione.filter(x => String(x) !== String(o.id))
+            : [...selezione, o.id];
+          evidenzia();
+          onChange([...selezione]);
+        } else {
+          if (String(selezione) === String(o.id)) return;
+          selezione = o.id;
+          evidenzia();
+          onChange(o.id);
+        }
       }
-    }));
+    });
+    bottoni.push({ id: o.id, elemento });
+    box.appendChild(elemento);
   }
+
+  evidenzia();
   return box;
 }
 
