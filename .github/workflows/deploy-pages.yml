@@ -24,7 +24,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
+      - name: Configura (e attiva) GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          # attiva Pages con build type "GitHub Actions" senza passare dai Settings
+          enablement: true
       - name: Carica il sito statico
         uses: actions/upload-pages-artifact@v3
         with:
