@@ -86,8 +86,26 @@ ascolta(disegna);
 disegna();
 
 // ------------------------------------------------------------ service worker
+// Quando arriva una versione nuova la pagina si ricarica una volta sola, cosi'
+// una correzione e' subito attiva anche sull'app installata sulla Home.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(e => console.warn('SW non registrato', e));
+  let ricaricata = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (ricaricata) return;
+    ricaricata = true;
+    location.reload();
+  });
+
+  window.addEventListener('load', async () => {
+    try {
+      const registrazione = await navigator.serviceWorker.register('./sw.js');
+      registrazione.update().catch(() => {});
+      // ricontrolla quando l'app torna in primo piano
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) registrazione.update().catch(() => {});
+      });
+    } catch (e) {
+      console.warn('SW non registrato', e);
+    }
   });
 }

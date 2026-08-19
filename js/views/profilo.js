@@ -5,6 +5,7 @@ import { PREFERENZE, ALIMENTI_BY_ID } from '../alimenti.js';
 import { GRUPPI_FOCUS } from '../allenamento.js';
 import { rigeneraTutto } from '../genera.js';
 import { esporta, importa, azzera } from '../store.js';
+import { VERSIONE } from '../versione.js';
 
 const LIMITAZIONI = [
   { id: 'ginocchia', nome: 'Ginocchia' },
@@ -30,7 +31,25 @@ const PASTI_OPZ = [3, 4, 5, 6].map(d => ({ id: d, nome: d + ' pasti' }));
 
 /** Blocchi di campi riutilizzati da wizard e profilo. */
 export function blocchi(bozza, aggiornaCampo) {
-  const set = (k, v) => { bozza[k] = v; aggiornaCampo(); };
+  // elementi che devono restare allineati alla bozza mentre la si modifica
+  const descrizioneObiettivo = h('div', { class: 'info-box', style: 'margin-bottom:13px' },
+    (OBIETTIVI[bozza.obiettivo] || OBIETTIVI.mantenimento).descr);
+  const campoBodyFat = h('input', {
+    type: 'number', step: '0.5', inputmode: 'decimal', value: bozza.bodyFat ?? '',
+    placeholder: 'stimata: ' + stimaBodyFat(bozza) + '%',
+    oninput: e => set('bodyFat', e.target.value === '' ? null : Number(e.target.value))
+  });
+
+  const set = (k, v) => {
+    bozza[k] = v;
+    if (k === 'obiettivo') {
+      descrizioneObiettivo.textContent = (OBIETTIVI[v] || OBIETTIVI.mantenimento).descr;
+    }
+    if (['peso', 'altezza', 'eta', 'sesso'].includes(k)) {
+      campoBodyFat.placeholder = 'stimata: ' + stimaBodyFat(bozza) + '%';
+    }
+    aggiornaCampo();
+  };
 
   const anagrafica = [
     campo('Nome (facoltativo)', h('input', { type: 'text', value: bozza.nome || '', oninput: e => { bozza.nome = e.target.value; } })),
@@ -41,17 +60,14 @@ export function blocchi(bozza, aggiornaCampo) {
       campo('Peso (kg)', h('input', { type: 'number', step: '0.1', inputmode: 'decimal', value: bozza.peso, oninput: e => set('peso', Number(e.target.value)) })),
       campo('Altezza (cm)', h('input', { type: 'number', inputmode: 'numeric', value: bozza.altezza, oninput: e => set('altezza', Number(e.target.value)) }))
     ]),
-    campo('% massa grassa (se la conosci)', h('input', {
-      type: 'number', step: '0.5', inputmode: 'decimal', value: bozza.bodyFat ?? '',
-      placeholder: 'stimata: ' + stimaBodyFat(bozza) + '%',
-      oninput: e => set('bodyFat', e.target.value === '' ? null : Number(e.target.value))
-    }), 'Se la inserisci, il calcolo del fabbisogno diventa piu preciso.'),
+    campo('% massa grassa (se la conosci)', campoBodyFat,
+      'Se la inserisci, il calcolo del fabbisogno diventa piu preciso.'),
     campo('Attivita fuori dalla palestra', select(bozza.attivita, Object.entries(LIVELLI_ATTIVITA).map(([id, v]) => ({ id, nome: v.nome })), v => set('attivita', v)))
   ];
 
   const obiettivo = [
     campo('Obiettivo', select(bozza.obiettivo, Object.entries(OBIETTIVI).map(([id, v]) => ({ id, nome: v.nome })), v => set('obiettivo', v))),
-    h('div', { class: 'info-box', style: 'margin-bottom:13px' }, (OBIETTIVI[bozza.obiettivo] || OBIETTIVI.mantenimento).descr),
+    descrizioneObiettivo,
     campo('Esperienza con i pesi', select(bozza.esperienza, Object.entries(ESPERIENZA).map(([id, v]) => ({ id, nome: v.nome })), v => set('esperienza', v)))
   ];
 
@@ -139,6 +155,16 @@ export function render(ctx) {
     ])
   ]));
 
+  radice.appendChild(sezione('Applicazione', [
+    h('div', { class: 'riga-sp' }, [
+      h('div', {}, [
+        h('div', { style: 'font-weight:650', testo: 'Versione ' + VERSIONE }),
+        h('small', { testo: 'Se una correzione non compare, forza il ricaricamento.' })
+      ]),
+      h('button', { class: 'btn secondario piccolo', testo: 'Aggiorna app', onclick: forzaAggiornamento })
+    ])
+  ]));
+
   radice.appendChild(h('div', { class: 'centro', style: 'color:var(--testo-3);font-size:.75rem;padding:10px 0 4px' },
     'GymDiet · i piani generati sono indicazioni generiche, non sostituiscono il parere di un medico o di un nutrizionista.'));
 
@@ -174,6 +200,24 @@ export function riepilogoCalcoli(profilo) {
 
 function stat(valore, etichetta) {
   return h('div', { class: 'stat' }, [h('div', { class: 'v', style: 'font-size:1.05rem', testo: String(valore) }), h('div', { class: 'e', testo: etichetta })]);
+}
+
+/** Svuota le cache e reinstalla il service worker: i tuoi dati restano. */
+async function forzaAggiornamento() {
+  toast('Aggiornamento in corso...');
+  try {
+    if ('caches' in window) {
+      const chiavi = await caches.keys();
+      await Promise.all(chiavi.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const registrazioni = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrazioni.map(r => r.unregister()));
+    }
+  } catch (e) {
+    console.warn('Pulizia cache non riuscita', e);
+  }
+  location.reload();
 }
 
 // ---------------------------------------------------------------- backup

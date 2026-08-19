@@ -15,6 +15,9 @@ Si installa sulla schermata Home dell'iPhone e funziona anche **offline**.
 3. Scegli **"Aggiungi a Home"** e conferma.
 4. Da quel momento l'app si apre a schermo intero, con la sua icona, e funziona anche senza rete.
 
+In *Profilo → Applicazione* trovi la versione installata e il tasto **Aggiorna app**, che svuota la
+cache e ricarica l'ultima versione pubblicata senza toccare i tuoi dati.
+
 > I dati (profilo, progressi, allenamenti registrati, pasti spuntati) restano solo su quel telefono,
 > nell'archivio locale di Safari. Dalla scheda **Profilo → Backup dei dati** puoi esportare un file
 > JSON e reimportarlo su un altro dispositivo.

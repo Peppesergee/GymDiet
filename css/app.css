@@ -283,7 +283,7 @@ button.cambia {
   position: fixed; left: 50%; transform: translateX(-50%);
   bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
   background: var(--acc); color: #06210f; font-weight: 800;
-  padding: 10px 18px; border-radius: 999px; z-index: 50; box-shadow: var(--ombra);
+  padding: 10px 18px; border-radius: 999px; z-index: 70; box-shadow: var(--ombra);
   display: flex; align-items: center; gap: 10px; font-variant-numeric: tabular-nums;
 }
 .timer button { background: rgba(0,0,0,.15); border: 0; border-radius: 8px; color: inherit; font-weight: 800; padding: 4px 9px; cursor: pointer; font-family: inherit; }

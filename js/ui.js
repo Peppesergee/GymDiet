@@ -52,15 +52,23 @@ export function foglio(contenuto, opzioni = {}) {
 
 export function conferma(messaggio) {
   return new Promise(risolvi => {
+    // la risposta va registrata prima della chiusura: chiudendo il foglio scatta
+    // allaChiusura, e una promessa gia' risolta ignora ogni risposta successiva
+    let deciso = false;
+    const decidi = valore => {
+      if (deciso) return;
+      deciso = true;
+      risolvi(valore);
+    };
     let chiudi;
     const contenuto = h('div', {}, [
       h('p', { testo: messaggio, style: 'margin-bottom:16px' }),
       h('div', { class: 'colonna' }, [
-        h('button', { class: 'btn pericolo', testo: 'Conferma', onclick: () => { chiudi(); risolvi(true); } }),
-        h('button', { class: 'btn secondario', testo: 'Annulla', onclick: () => { chiudi(); risolvi(false); } })
+        h('button', { class: 'btn pericolo', testo: 'Conferma', onclick: () => { decidi(true); chiudi(); } }),
+        h('button', { class: 'btn secondario', testo: 'Annulla', onclick: () => { decidi(false); chiudi(); } })
       ])
     ]);
-    chiudi = foglio(contenuto, { titolo: 'Sei sicuro?', allaChiusura: () => risolvi(false) });
+    chiudi = foglio(contenuto, { titolo: 'Sei sicuro?', allaChiusura: () => decidi(false) });
   });
 }
 
