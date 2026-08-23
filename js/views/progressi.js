@@ -1,5 +1,5 @@
 // Vista "Progressi": peso, misure, storico allenamenti, record.
-import { h, sezione, toast, conferma, num } from '../ui.js';
+import { h, sezione, toast, conferma, num, foglio } from '../ui.js';
 import { oggiISO, dataItaliana } from '../store.js';
 import { ESERCIZI_BY_ID } from '../exercises.js';
 
@@ -59,12 +59,18 @@ export function render(ctx) {
   const record = calcolaRecord(stato.log.sessioni);
   if (record.length) {
     radice.appendChild(sezione('Record personali (massimale stimato)', [
+      h('small', { style: 'display:block;margin-bottom:6px', testo: 'Tocca un esercizio per vedere come e\' cambiato il peso nel tempo.' }),
       h('ul', { class: 'elenco' }, record.slice(0, 12).map(r => h('li', {}, [
-        h('div', { style: 'flex:1' }, [
-          h('div', { class: 'titolo', testo: r.nome }),
-          h('div', { class: 'meta', testo: `${r.peso} kg × ${r.rip} · ${dataItaliana(r.data)}` })
-        ]),
-        h('span', { class: 'badge verde', testo: r.stimato + ' kg' })
+        h('button', {
+          class: 'esercizio', style: 'padding:0;border:0', type: 'button',
+          onclick: () => apriProgressioneEsercizio(stato, r.esercizioId, r.nome)
+        }, [
+          h('div', { class: 'info' }, [
+            h('div', { class: 'titolo', testo: r.nome }),
+            h('div', { class: 'meta', testo: `${r.peso} kg × ${r.rip} · ${dataItaliana(r.data)}` })
+          ]),
+          h('span', { class: 'badge verde', testo: r.stimato + ' kg' })
+        ])
       ])))
     ]));
   }
@@ -82,7 +88,11 @@ export function render(ctx) {
   radice.appendChild(sezione('Storico allenamenti', [
     sessioni.length
       ? h('ul', { class: 'elenco' }, sessioni.slice(0, 25).map(s => h('li', {}, [
-          h('div', { style: 'flex:1' }, [
+          h('button', {
+            class: 'apri-seduta',
+            style: 'flex:1;min-width:0;background:none;border:0;text-align:left;padding:0;color:inherit;font:inherit;cursor:pointer',
+            type: 'button', onclick: () => apriModificaSeduta({ stato, aggiorna }, s)
+          }, [
             h('div', { class: 'titolo', testo: s.nome }),
             h('div', { class: 'meta', testo: `${dataItaliana(s.data)} · ${s.durataMin} min · ${s.esercizi.length} esercizi${s.note ? ' · ' + s.note : ''}` })
           ]),
@@ -207,4 +217,132 @@ function storicoMisure(misure, campi) {
         .concat(campi.map(([id]) => h('td', { style: 'text-align:center', testo: m[id] ? String(m[id]) : '—' }))))))
     ])
   ]);
+}
+
+// ---------------------------------------------------------------- progressione per esercizio
+/** Apre il grafico e lo storico peso/ripetizioni per un singolo esercizio. */
+export function apriProgressioneEsercizio(stato, esercizioId, nomeEsercizio) {
+  const righe = [];
+  for (const s of stato.log.sessioni) {
+    const es = (s.esercizi || []).find(e => e.esercizioId === esercizioId);
+    const valide = es ? es.serie.filter(x => Number(x.peso) > 0) : [];
+    if (!valide.length) continue;
+    // la serie con il carico piu' alto rappresenta la seduta
+    const top = valide.reduce((a, b) => Number(b.peso) > Number(a.peso) ? b : a);
+    righe.push({
+      data: s.data, peso: Number(top.peso), rip: Number(top.rip) || 0,
+      stimato: Math.round(Number(top.peso) * (1 + (Number(top.rip) || 0) / 30) * 10) / 10
+    });
+  }
+  righe.sort((a, b) => a.data.localeCompare(b.data));
+
+  const contenuto = h('div');
+  if (righe.length >= 2) {
+    contenuto.appendChild(grafico(righe.map(r => ({ x: r.data, y: r.stimato }))));
+    contenuto.appendChild(h('small', { style: 'display:block;margin:6px 0 14px;color:var(--testo-3)', testo: 'Massimale stimato (formula di Epley) del carico piu\' alto della seduta.' }));
+  } else {
+    contenuto.appendChild(h('div', { class: 'info-box', style: 'margin-bottom:14px' },
+      righe.length === 1 ? 'Registrato solo una volta finora: allenati di nuovo per vedere l\'andamento.' : 'Non hai ancora registrato pesi per questo esercizio.'));
+  }
+
+  if (righe.length) {
+    contenuto.appendChild(h('div', { style: 'overflow-x:auto' }, [
+      h('table', { style: 'width:100%;border-collapse:collapse;font-size:.85rem' }, [
+        h('thead', {}, [h('tr', {}, [
+          h('th', { style: 'text-align:left;color:var(--testo-3)', testo: 'Data' }),
+          h('th', { style: 'color:var(--testo-3)', testo: 'Peso' }),
+          h('th', { style: 'color:var(--testo-3)', testo: 'Rip' }),
+          h('th', { style: 'color:var(--testo-3)', testo: '1RM stim.' })
+        ])]),
+        h('tbody', {}, righe.slice().reverse().map(r => h('tr', {}, [
+          h('td', { testo: dataItaliana(r.data) }),
+          h('td', { style: 'text-align:center', testo: r.peso + ' kg' }),
+          h('td', { style: 'text-align:center', testo: String(r.rip) }),
+          h('td', { style: 'text-align:center', testo: r.stimato + ' kg' })
+        ])))
+      ])
+    ]));
+  }
+
+  foglio(contenuto, { titolo: nomeEsercizio });
+}
+
+// ---------------------------------------------------------------- modifica seduta passata
+/** Apre una seduta gia' registrata per correggere pesi/ripetizioni o eliminarla. */
+export function apriModificaSeduta(ctx, sessioneOriginale) {
+  const { aggiorna } = ctx;
+  // si lavora su una copia: nulla viene salvato finche' non si tocca "Salva"
+  const bozza = structuredClone(sessioneOriginale);
+  const contenuto = h('div');
+
+  contenuto.appendChild(h('div', { class: 'info-box', style: 'margin-bottom:12px' },
+    `${dataItaliana(bozza.data)} · ${bozza.durataMin} min`));
+
+  bozza.esercizi.forEach(es => {
+    const box = h('div', { class: 'scheda-box compatta', style: 'margin-bottom:10px' });
+    box.appendChild(h('div', { class: 'riga-sp', style: 'margin-bottom:8px' }, [
+      h('div', { style: 'font-weight:650', testo: es.nome }),
+      h('button', {
+        class: 'btn secondario piccolo', testo: '📈 Andamento',
+        onclick: () => apriProgressioneEsercizio({ log: { sessioni: [...ctx.stato.log.sessioni.filter(s => s.id !== bozza.id), bozza] } }, es.esercizioId, es.nome)
+      })
+    ]));
+    const righeSerie = h('div');
+    const disegnaSerie = () => {
+      righeSerie.textContent = '';
+      es.serie.forEach((serie, i) => {
+        righeSerie.appendChild(h('div', { class: 'serie-riga' }, [
+          h('div', { class: 'n', testo: String(i + 1) }),
+          h('input', {
+            type: 'number', inputmode: 'decimal', step: '0.5', placeholder: 'kg', value: serie.peso || '',
+            oninput: e => { serie.peso = Number(e.target.value) || 0; }
+          }),
+          h('input', {
+            type: 'number', inputmode: 'numeric', placeholder: 'rip', value: serie.rip || '',
+            oninput: e => { serie.rip = Number(e.target.value) || 0; }
+          }),
+          h('button', {
+            class: 'cambia', testo: '×', title: 'Rimuovi serie',
+            onclick: () => { es.serie.splice(i, 1); disegnaSerie(); }
+          })
+        ]));
+      });
+    };
+    disegnaSerie();
+    box.appendChild(righeSerie);
+    box.appendChild(h('button', {
+      class: 'btn secondario piccolo', style: 'margin-top:8px', testo: '+ Aggiungi serie',
+      onclick: () => { es.serie.push({ peso: 0, rip: 0 }); disegnaSerie(); }
+    }));
+    contenuto.appendChild(box);
+  });
+
+  const note = h('textarea', { rows: 2, placeholder: 'Note sulla seduta', value: bozza.note || '' });
+  contenuto.appendChild(h('div', { class: 'campo' }, [h('label', { testo: 'Note' }), note]));
+
+  contenuto.appendChild(h('div', { class: 'colonna' }, [
+    h('button', {
+      class: 'btn', testo: 'Salva modifiche',
+      onclick: () => {
+        bozza.note = note.value.trim();
+        bozza.esercizi = bozza.esercizi.filter(e => e.serie.length > 0);
+        aggiorna(s => {
+          const idx = s.log.sessioni.findIndex(x => x.id === bozza.id);
+          if (idx >= 0) s.log.sessioni[idx] = bozza;
+        });
+        chiudi();
+        toast('Seduta aggiornata');
+      }
+    }),
+    h('button', {
+      class: 'btn pericolo', testo: 'Elimina seduta',
+      onclick: async () => {
+        if (!await conferma('Eliminare questa seduta dallo storico?')) return;
+        aggiorna(s => { s.log.sessioni = s.log.sessioni.filter(x => x.id !== bozza.id); });
+        chiudi();
+      }
+    })
+  ]));
+
+  const chiudi = foglio(contenuto, { titolo: 'Modifica seduta' });
 }

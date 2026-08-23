@@ -3,6 +3,7 @@ import { h, foglio, toast, beep, mmss, conferma } from '../ui.js';
 import { apriEsercizio } from './esercizio.js';
 import { creaAnimazione } from '../anim.js';
 import { oggiISO } from '../store.js';
+import { apriProgressioneEsercizio } from './progressi.js';
 
 /** Ultimo carico registrato per un esercizio. */
 export function ultimoCarico(log, esercizioId) {
@@ -114,8 +115,14 @@ export function apriSessione(sessione, ctx) {
         h('div', { style: 'flex:1;min-width:0' }, [
           h('div', { style: 'font-weight:650', testo: `${idx + 1}. ${voce.nome}` }),
           h('div', { class: 'par', style: 'font-size:.8rem;color:var(--testo-2)', testo: `${voce.serie} × ${voce.ripetizioni}${voce.recupero ? ' · rec ' + voce.recupero + 's' : ''}` })
-        ]),
-        h('button', { class: 'btn secondario piccolo', testo: 'Come si fa', onclick: () => apriEsercizio(voce, {}) })
+        ])
+      ]),
+      h('div', { class: 'riga', style: 'gap:8px;margin-bottom:9px' }, [
+        h('button', { class: 'btn secondario piccolo', style: 'flex:1', testo: 'Come si fa', onclick: () => apriEsercizio(voce, {}) }),
+        h('button', {
+          class: 'btn secondario piccolo', style: 'flex:1', testo: '📈 Andamento',
+          onclick: () => apriProgressioneEsercizio(stato, voce.esercizioId, voce.nome)
+        })
       ]),
       h('div', { class: 'info-box', style: 'margin-bottom:9px;font-size:.8rem' }, suggerimento(voce, precedente)),
       righeSerie

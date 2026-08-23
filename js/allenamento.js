@@ -138,13 +138,25 @@ function durataStimata(esercizi) {
   return Math.round(sec / 60) + 8; // + riscaldamento
 }
 
+/** Normalizza l'elenco di giorni scelti: interi 0-6, senza doppioni, in ordine. */
+function giorniValidi(lista) {
+  if (!Array.isArray(lista)) return [];
+  return [...new Set(lista.filter(g => Number.isInteger(g) && g >= 0 && g <= 6))].sort((a, b) => a - b);
+}
+
 /**
  * Genera la scheda.
- * @param profilo { giorniAllenamento, durataSessione, obiettivo, esperienza, attrezzatura, limitazioni, focus, cardio }
+ * @param profilo { giorniAllenamento, giorniSettimana, durataSessione, obiettivo, esperienza, attrezzatura, limitazioni, focus, cardio }
  * @param opzioni { seed, offsets, esclusi }
  */
 export function generaScheda(profilo, opzioni = {}) {
-  const giorni = Math.max(2, Math.min(6, Number(profilo.giorniAllenamento) || 3));
+  // i giorni specifici scelti dall'utente hanno la priorita'; il numero di
+  // sedute e' il loro conteggio. Se mancano o sono fuori range si ricade
+  // sulla spaziatura predefinita dello split in base al solo conteggio.
+  const scelti = giorniValidi(profilo.giorniSettimana);
+  const giorni = scelti.length >= 2 && scelti.length <= 6
+    ? scelti.length
+    : Math.max(2, Math.min(6, Number(profilo.giorniAllenamento) || 3));
   const esperienza = profilo.esperienza || 'principiante';
   const obiettivo = profilo.obiettivo || 'mantenimento';
   const seed = opzioni.seed || 'gymdiet';
@@ -154,6 +166,7 @@ export function generaScheda(profilo, opzioni = {}) {
   let chiaveSplit = giorni;
   if (giorni === 3 && esperienza !== 'principiante') chiaveSplit = 3.5;
   const split = SPLIT[chiaveSplit] || SPLIT[3];
+  const giorniSessione = scelti.length === giorni ? scelti : split.giorni;
   const nEx = numeroEsercizi(profilo.durataSessione || 60);
 
   const conteggi = {};
@@ -252,7 +265,7 @@ export function generaScheda(profilo, opzioni = {}) {
       chiave: chiaveSess,
       nome: modello.nome,
       tipo: modello.tipo,
-      giornoSuggerito: split.giorni[idx],
+      giornoSuggerito: giorniSessione[idx],
       riscaldamento: RISCALDAMENTO[modello.tipo] || RISCALDAMENTO.full,
       esercizi,
       defaticamento: DEFATICAMENTO,

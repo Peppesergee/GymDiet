@@ -17,6 +17,7 @@ export const STATO_INIZIALE = {
     obiettivo: 'ricomposizione',
     esperienza: 'principiante',
     giorniAllenamento: 3,
+    giorniSettimana: [0, 2, 4], // 0=Lunedi ... 6=Domenica, tenuto allineato a giorniAllenamento
     durataSessione: 60,
     attrezzatura: 'palestra',
     limitazioni: [],

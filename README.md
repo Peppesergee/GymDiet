@@ -51,14 +51,18 @@ Riassunto della giornata: la seduta prevista (con avvio dell'allenamento), i pas
 spuntare, le calorie già assunte, la registrazione rapida del peso e il conteggio settimanale.
 
 ### Scheda
-- Sceglie automaticamente lo **split** in base ai giorni disponibili e all'esperienza:
-  Full Body (2-3x), Push/Pull/Legs (3x e 6x), Upper/Lower (4x), PPL + Upper/Lower (5x).
+- Scegli tu **quali giorni della settimana** allenarti (2-6 giorni); lo split (Full Body, Push/Pull/
+  Legs, Upper/Lower...) si adatta al conteggio e all'esperienza e le sedute vengono distribuite sui
+  giorni scelti — la ciclizzazione dei carboidrati nella dieta segue automaticamente le stesse date.
 - Numero di esercizi calibrato sulla **durata della seduta**; serie, ripetizioni, recupero e RIR
   in base all'**obiettivo** (forza, massa, dimagrimento, ricomposizione, mantenimento).
 - Esclude gli esercizi a rischio per le articolazioni indicate come problematiche (ginocchia,
   spalle, schiena) e filtra per attrezzatura (palestra, casa, corpo libero).
 - Ogni esercizio ha una **spiegazione visiva**: una figura animata in SVG che mostra il movimento,
   più preparazione, esecuzione passo-passo, errori tipici, respirazione, muscoli coinvolti e varianti.
+- Durante l'allenamento registri **peso e ripetizioni per ogni serie**; ogni seduta passata resta
+  modificabile dallo storico in Progressi, e per ogni esercizio puoi aprire un grafico con
+  l'andamento del carico nel tempo (tasto "📈 Andamento", sia in allenamento sia nei record).
 - Sedute dello stesso tipo nella settimana usano esercizi diversi, per varietà.
 - Modalità allenamento: registri carico e ripetizioni serie per serie, con **timer di recupero**
   (con segnale acustico) e suggerimento di progressione basato sulla seduta precedente.
@@ -66,6 +70,9 @@ spuntare, le calorie già assunte, la registrazione rapida del peso e il contegg
 ### Dieta
 - Calcola metabolismo basale (Mifflin-St Jeor, oppure Katch-McArdle se indichi la massa grassa),
   fabbisogno giornaliero (attività + allenamenti) e i **macronutrienti** in base all'obiettivo.
+  Le proteine partono da 2.0-2.4 g per kg di peso corporeo (più alte in deficit calorico, per
+  preservare la massa magra) e vengono scontate solo se inserisci tu stesso la tua % di grasso
+  corporeo — una stima automatica non basta a giustificare un target più basso.
 - Genera **7 giorni** di menù completi con alimenti reali e **grammature precise**, distribuiti sul
   numero di pasti che preferisci (3-6).
 - Le quantità sono calcolate da un ottimizzatore che minimizza lo scarto dai macro giornalieri

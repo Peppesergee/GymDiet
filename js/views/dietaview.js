@@ -38,6 +38,7 @@ export function render(ctx) {
 
   // ------------------------------------------------ riepilogo giornata
   const scarto = giorno.target.kcal ? Math.round((giorno.totali.kcal - giorno.target.kcal) / giorno.target.kcal * 100) : 0;
+  const scartoProteine = Math.round(giorno.totali.proteine - giorno.target.proteine);
   radice.appendChild(sezione(null, [
     h('div', { class: 'riga-sp', style: 'margin-bottom:9px' }, [
       h('div', {}, [
@@ -50,7 +51,9 @@ export function render(ctx) {
     h('div', { style: 'margin-top:9px' }, [barraMacro(giorno.totali)]),
     h('small', { style: 'display:block;margin-top:7px', testo: `Obiettivo del giorno: ${num(giorno.target.kcal)} kcal · ${giorno.target.proteine} P · ${giorno.target.carboidrati} C · ${giorno.target.grassi} G · fibre ${giorno.totali.fibre} g` }),
     Math.abs(scarto) > 8 ? h('div', { class: 'avviso', style: 'margin-top:9px' },
-      `Il piano di oggi si discosta del ${scarto > 0 ? '+' : ''}${scarto}% dalle calorie obiettivo: con questi vincoli le porzioni non scendono oltre. Prova ad aumentare il numero di pasti nel profilo.`) : null
+      `Il piano di oggi si discosta del ${scarto > 0 ? '+' : ''}${scarto}% dalle calorie obiettivo: con questi vincoli le porzioni non scendono oltre. Prova ad aumentare il numero di pasti nel profilo.`) : null,
+    scartoProteine < -12 ? h('div', { class: 'avviso', style: 'margin-top:9px' },
+      `Mancano ${Math.abs(scartoProteine)} g di proteine rispetto all'obiettivo: con le tue preferenze alimentari e il numero di pasti attuale non si riesce a inserirne di piu' senza sforare le altre quote. Prova ad aumentare il numero di pasti, oppure aggiungi tu stesso uno yogurt proteico o un frullato di proteine.`) : null
   ]));
 
   // ------------------------------------------------ pasti

@@ -70,6 +70,10 @@ export function render(ctx) {
       if (!(bozza.peso >= 30 && bozza.peso <= 250)) { toast('Inserisci un peso valido'); return false; }
       if (!(bozza.altezza >= 130 && bozza.altezza <= 220)) { toast('Inserisci un\'altezza valida'); return false; }
     }
+    if (passo === 2) {
+      const nGiorni = (bozza.giorniSettimana || []).length;
+      if (nGiorni < 2 || nGiorni > 6) { toast('Seleziona tra 2 e 6 giorni di allenamento'); return false; }
+    }
     return true;
   }
 

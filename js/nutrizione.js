@@ -8,11 +8,11 @@ export const LIVELLI_ATTIVITA = {
 };
 
 export const OBIETTIVI = {
-  dimagrimento:   { nome: 'Dimagrimento', deltaKcal: -0.20, proteine: 2.0, grassi: 0.8, descr: 'Deficit calorico del 20% con proteine alte per preservare la massa magra.' },
-  ricomposizione: { nome: 'Ricomposizione corporea', deltaKcal: -0.08, proteine: 2.1, grassi: 0.9, descr: 'Leggero deficit: perdi grasso mantenendo (o costruendo) muscolo.' },
-  mantenimento:   { nome: 'Mantenimento', deltaKcal: 0, proteine: 1.8, grassi: 1.0, descr: 'Calorie di mantenimento, focus su performance e salute.' },
-  massa:          { nome: 'Aumento massa muscolare', deltaKcal: 0.12, proteine: 1.9, grassi: 1.0, descr: 'Surplus calorico moderato per crescere limitando il grasso.' },
-  forza:          { nome: 'Forza', deltaKcal: 0.08, proteine: 1.9, grassi: 1.0, descr: 'Leggero surplus a supporto di alzate pesanti.' }
+  dimagrimento:   { nome: 'Dimagrimento', deltaKcal: -0.20, proteine: 2.4, grassi: 0.8, descr: 'Deficit calorico del 20% con proteine alte per preservare la massa magra.' },
+  ricomposizione: { nome: 'Ricomposizione corporea', deltaKcal: -0.08, proteine: 2.4, grassi: 0.9, descr: 'Leggero deficit: perdi grasso mantenendo (o costruendo) muscolo.' },
+  mantenimento:   { nome: 'Mantenimento', deltaKcal: 0, proteine: 2.0, grassi: 1.0, descr: 'Calorie di mantenimento, focus su performance e salute.' },
+  massa:          { nome: 'Aumento massa muscolare', deltaKcal: 0.12, proteine: 2.2, grassi: 1.0, descr: 'Surplus calorico moderato per crescere limitando il grasso.' },
+  forza:          { nome: 'Forza', deltaKcal: 0.08, proteine: 2.2, grassi: 1.0, descr: 'Leggero surplus a supporto di alzate pesanti.' }
 };
 
 export const ESPERIENZA = {
@@ -54,7 +54,9 @@ export function calcolaMacro(p) {
 
   const pesoRif = pesoRiferimento(p);
   let proteine = Math.round(pesoRif * ob.proteine);
-  proteine = Math.min(proteine, Math.round(kcal * 0.35 / 4));
+  // tetto di sicurezza, non un obiettivo: evita target assurdi con calorie
+  // molto basse, ma non deve mai mordere in condizioni normali
+  proteine = Math.min(proteine, Math.round(kcal * 0.45 / 4));
   let grassi = Math.round(pesoRif * ob.grassi);
   let kcalRimanenti = kcal - proteine * 4 - grassi * 9;
   // se i carboidrati risultassero troppo bassi, riduco leggermente i grassi
@@ -87,14 +89,20 @@ export function stimaBodyFat(p) {
   return Math.max(5, Math.round((1.2 * bmi + 0.23 * eta - 10.8 * sesso - 5.4) * 10) / 10);
 }
 
-/** Con BF alto si usa un peso "corretto" per non gonfiare i target proteici. */
+/**
+ * Con BF alto si usa un peso "corretto" per non gonfiare il target proteico
+ * oltre la massa magra disponibile. Lo sconto si applica SOLO se l'utente ha
+ * inserito la propria % di grasso: una stima automatica (da BMI) confonde
+ * massa magra con massa grassa e penalizzerebbe ingiustamente chi e'
+ * muscoloso, che e' esattamente il caso in cui le proteine servono di piu'.
+ */
 function pesoRiferimento(p) {
   const peso = Number(p.peso) || 75;
-  const bf = Number(p.bodyFat) || stimaBodyFat(p);
-  const soglia = p.sesso === 'donna' ? 30 : 22;
+  const bf = Number(p.bodyFat) || 0;
+  const soglia = p.sesso === 'donna' ? 32 : 25;
   if (bf > soglia) {
     const magra = peso * (1 - bf / 100);
-    return Math.round((magra * 1.25) * 10) / 10;
+    return Math.round((magra * 1.4) * 10) / 10;
   }
   return peso;
 }

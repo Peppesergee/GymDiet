@@ -147,7 +147,12 @@ function penalitaZero(voce) {
 // aggiunte extra invece si possono togliere.
 function limiti(voce) {
   const a = voce.alimento;
-  if (voce.extra || voce.ruolo === 'grassi') return [0, a.max];
+  // le porzioni "extra" esistono solo perche' correggiCarenze le ha giudicate
+  // necessarie a colmare un buco proteico: non devono poter tornare a zero,
+  // altrimenti il bilanciamento su kcal/carboidrati che segue le annulla
+  // silenziosamente e il buco si riapre
+  if (voce.extra) return [a.min, a.max];
+  if (voce.ruolo === 'grassi') return [0, a.max];
   if (voce.ruolo === 'verdura') return [Math.min(100, a.min), a.max];
   return [a.min, a.max];
 }
@@ -204,7 +209,7 @@ function ottimizzaGiorno(pasti, target, pool) {
   for (let i = 0; i < 6; i++) passo();
   correggiCarenze(pasti, target, pool);
   voci = pasti.flatMap(p => p.voci);
-  for (let i = 0; i < 5; i++) passo();
+  for (let i = 0; i < 8; i++) passo();
 
   // rimuove gli alimenti azzerati, garantendo almeno una voce per pasto
   for (const p of pasti) {
@@ -223,25 +228,55 @@ function ottimizzaGiorno(pasti, target, pool) {
  * Se il fabbisogno proteico non e' raggiungibile con le porzioni scelte
  * (tipico con pochi pasti o diete vegane) aggiunge una porzione extra.
  */
+/**
+ * Se dopo l'ottimizzazione resta uno scarto importante su un nutriente
+ * (tipico con pochi pasti, diete vegane/vegetariane per le proteine, o
+ * bulking senza glutine per i carboidrati) aggiunge porzioni extra dedicate.
+ * Generica su proteine e carboidrati: stesso meccanismo, chiave diversa.
+ */
+const NUTRIENTI_DA_CORREGGERE = [
+  {
+    chiave: 'proteine', ruolo: 'proteine', soglia: 6,
+    // preferisce fonti povere di carboidrati, per non sottrarre spazio
+    // alla quota di carboidrati del pasto
+    punteggio: a => (a.p - a.c * 0.5) / Math.max(a.kcal, 1)
+  },
+  {
+    chiave: 'carboidrati', ruolo: 'carbo', soglia: 10,
+    // preferisce fonti povere di grassi, per non sforare quella quota
+    punteggio: a => (a.c - a.g * 0.5) / Math.max(a.kcal, 1)
+  }
+];
+
 function correggiCarenze(pasti, target, pool) {
-  for (let giro = 0; giro < 3; giro++) {
+  for (const cfg of NUTRIENTI_DA_CORREGGERE) {
+    correggiUnNutriente(pasti, target, pool, cfg);
+  }
+}
+
+function correggiUnNutriente(pasti, target, pool, cfg) {
+  // fino a due porzioni extra per pasto: con pochi pasti o vincoli stretti
+  // una sola non basta a colmare il divario senza sforare gli altri macro
+  const MAX_EXTRA_PER_PASTO = 2;
+  for (let giro = 0; giro < 8; giro++) {
     const tutte = pasti.flatMap(p => p.voci);
     const totali = sommaMacro(tutte);
-    const mancante = target.proteine - totali.proteine;
-    if (mancante < 8) return;
-    const ordinati = pasti.slice().sort((a, b) => b.target.proteine - a.target.proteine);
+    const mancante = target[cfg.chiave] - totali[cfg.chiave];
+    if (mancante < cfg.soglia) return;
+    const ordinati = pasti.slice().sort((a, b) => b.target[cfg.chiave] - a.target[cfg.chiave]);
     let aggiunto = false;
     for (const pasto of ordinati) {
-      if (pasto.voci.filter(v => v.ruolo === 'proteine').length > 1) continue;
+      const extraPresenti = pasto.voci.filter(v => v.ruolo === cfg.ruolo && v.extra).length;
+      if (extraPresenti >= MAX_EXTRA_PER_PASTO) continue;
       const usati = new Set(pasto.voci.map(v => v.alimentoId));
-      const lista = candidati(pool || [], 'proteine', pasto.id)
+      const lista = candidati(pool || [], cfg.ruolo, pasto.id)
         .filter(a => !usati.has(a.id))
-        .sort((a, b) => (b.p / Math.max(b.kcal, 1)) - (a.p / Math.max(a.kcal, 1)));
+        .sort((a, b) => cfg.punteggio(b) - cfg.punteggio(a));
       const scelto = lista[0];
       if (!scelto) continue;
       pasto.voci.push({
-        ruolo: 'proteine', tipo: 'solve', extra: true, alimentoId: scelto.id, alimento: scelto,
-        grammi: scelto.min, macro: macroDi(scelto, scelto.min), chiaveOffset: `${pasto.id}.proteine-extra`
+        ruolo: cfg.ruolo, tipo: 'solve', extra: true, alimentoId: scelto.id, alimento: scelto,
+        grammi: scelto.min, macro: macroDi(scelto, scelto.min), chiaveOffset: `${pasto.id}.${cfg.ruolo}-extra${extraPresenti}`
       });
       aggiunto = true;
       break;

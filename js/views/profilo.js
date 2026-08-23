@@ -26,8 +26,8 @@ const CARDIO = [
 ];
 
 const DURATE = [30, 45, 60, 75, 90].map(d => ({ id: d, nome: d + ' min' }));
-const GIORNI_OPZ = [2, 3, 4, 5, 6].map(d => ({ id: d, nome: d + 'x' }));
 const PASTI_OPZ = [3, 4, 5, 6].map(d => ({ id: d, nome: d + ' pasti' }));
+const GIORNI_SETT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map((nome, id) => ({ id, nome }));
 
 /** Blocchi di campi riutilizzati da wizard e profilo. */
 export function blocchi(bozza, aggiornaCampo) {
@@ -71,8 +71,29 @@ export function blocchi(bozza, aggiornaCampo) {
     campo('Esperienza con i pesi', select(bozza.esperienza, Object.entries(ESPERIENZA).map(([id, v]) => ({ id, nome: v.nome })), v => set('esperienza', v)))
   ];
 
+  // Il conteggio (usato per scegliere lo split) e' sempre il numero di
+  // giorni selezionati qui: un'unica fonte di verita', niente da tenere
+  // allineato a mano.
+  const notaGiorni = h('small', { style: 'display:block;margin-top:6px' });
+  const aggiornaNotaGiorni = () => {
+    const n = bozza.giorniSettimana.length;
+    notaGiorni.textContent = n < 2
+      ? 'Seleziona almeno 2 giorni.'
+      : n > 6
+        ? 'Al massimo 6 giorni a settimana.'
+        : `${n} allenamenti a settimana.`;
+    notaGiorni.className = (n < 2 || n > 6) ? 'avviso' : '';
+  };
+  const selettoreGiorni = chips(bozza.giorniSettimana, GIORNI_SETT, v => {
+    bozza.giorniSettimana = v.slice().sort((a, b) => a - b);
+    bozza.giorniAllenamento = bozza.giorniSettimana.length;
+    aggiornaNotaGiorni();
+    aggiornaCampo();
+  }, true);
+  aggiornaNotaGiorni();
+
   const allenamento = [
-    h('div', { class: 'campo' }, [h('label', { testo: 'Allenamenti a settimana' }), chips(bozza.giorniAllenamento, GIORNI_OPZ, v => set('giorniAllenamento', Number(v)))]),
+    h('div', { class: 'campo' }, [h('label', { testo: 'Giorni di allenamento' }), selettoreGiorni, notaGiorni]),
     h('div', { class: 'campo' }, [h('label', { testo: 'Durata di una seduta' }), chips(bozza.durataSessione, DURATE, v => set('durataSessione', Number(v)))]),
     campo('Attrezzatura disponibile', select(bozza.attrezzatura, ATTREZZATURA, v => set('attrezzatura', v))),
     h('div', { class: 'campo' }, [h('label', { testo: 'Zone da proteggere (dolori o infortuni)' }), chips(bozza.limitazioni, LIMITAZIONI, v => set('limitazioni', v), true)]),
@@ -175,6 +196,8 @@ function validazione(b) {
   if (!(b.eta >= 14 && b.eta <= 90)) { toast('Inserisci un\'eta tra 14 e 90 anni'); return false; }
   if (!(b.peso >= 30 && b.peso <= 250)) { toast('Inserisci un peso tra 30 e 250 kg'); return false; }
   if (!(b.altezza >= 130 && b.altezza <= 220)) { toast('Inserisci un\'altezza tra 130 e 220 cm'); return false; }
+  const nGiorni = (b.giorniSettimana || []).length;
+  if (nGiorni < 2 || nGiorni > 6) { toast('Seleziona tra 2 e 6 giorni di allenamento'); return false; }
   return true;
 }
 
