@@ -34,16 +34,26 @@ export function toast(messaggio, ms = 2000) {
 
 /** Foglio modale che sale dal basso. Ritorna una funzione per chiuderlo. */
 export function foglio(contenuto, opzioni = {}) {
-  const corpo = h('div', { class: 'foglio' }, [h('div', { class: 'maniglia' })]);
-  if (opzioni.titolo) corpo.appendChild(h('h2', { testo: opzioni.titolo }));
-  const lista = Array.isArray(contenuto) ? contenuto : [contenuto];
-  lista.forEach(c => c && corpo.appendChild(c));
-  const sfondo = h('div', { class: 'foglio-sfondo' }, [corpo]);
+  // dichiarato prima cosi' il pulsante di chiusura puo' riferirlo; su una
+  // scheda lunga (es. il dettaglio di un esercizio) toccare fuori dal
+  // foglio non basta se il contenuto riempie tutto lo schermo, quindi la X
+  // resta visibile e raggiungibile anche scorrendo
+  let sfondo;
   const chiudi = () => {
     sfondo.remove();
     document.body.style.overflow = '';
     if (opzioni.allaChiusura) opzioni.allaChiusura();
   };
+
+  const testata = h('div', { class: 'foglio-testata' }, [
+    h('div', { class: 'maniglia' }),
+    h('button', { class: 'foglio-chiudi', type: 'button', 'aria-label': 'Chiudi', onclick: chiudi, html: '&times;' })
+  ]);
+  const corpo = h('div', { class: 'foglio' }, [testata]);
+  if (opzioni.titolo) corpo.appendChild(h('h2', { testo: opzioni.titolo }));
+  const lista = Array.isArray(contenuto) ? contenuto : [contenuto];
+  lista.forEach(c => c && corpo.appendChild(c));
+  sfondo = h('div', { class: 'foglio-sfondo' }, [corpo]);
   sfondo.addEventListener('click', ev => { if (ev.target === sfondo) chiudi(); });
   document.body.appendChild(sfondo);
   document.body.style.overflow = 'hidden';
