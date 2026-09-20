@@ -176,6 +176,8 @@ export function render(ctx) {
     ])
   ]));
 
+  radice.appendChild(sezioneClaudeApi(stato, aggiorna));
+
   radice.appendChild(sezione('Applicazione', [
     h('div', { class: 'riga-sp' }, [
       h('div', {}, [
@@ -223,6 +225,45 @@ export function riepilogoCalcoli(profilo) {
 
 function stat(valore, etichetta) {
   return h('div', { class: 'stat' }, [h('div', { class: 'v', style: 'font-size:1.05rem', testo: String(valore) }), h('div', { class: 'e', testo: etichetta })]);
+}
+
+// ---------------------------------------------------------------- Claude
+function sezioneClaudeApi(stato, aggiorna) {
+  const chiaveAttuale = stato.integrazioni && stato.integrazioni.claudeApiKey;
+  const inputChiave = h('input', { type: 'password', placeholder: chiaveAttuale ? 'Nuova chiave (sovrascrive quella salvata)' : 'sk-ant-...', autocomplete: 'off' });
+
+  return sezione('Sostituzione esercizi con Claude', [
+    h('p', { style: 'font-size:.86rem;color:var(--testo-2)' },
+      'Nella Scheda, quando cambi un esercizio, puoi cercarne uno nel database oppure chiederlo a Claude se non lo trovi. Serve la tua chiave API personale: le chiamate partono direttamente dal tuo telefono verso Anthropic, non passano da nessun server di GymDiet e non vengono mai incluse nei backup che esporti.'),
+    chiaveAttuale
+      ? h('div', { class: 'info-box', style: 'margin-bottom:10px' }, `Chiave salvata, termina con ...${chiaveAttuale.slice(-4)}`)
+      : null,
+    h('div', { class: 'campo' }, [
+      h('label', { testo: 'Chiave API di Claude' }),
+      inputChiave
+    ]),
+    h('div', { class: 'riga', style: 'gap:8px' }, [
+      h('button', {
+        class: 'btn secondario', style: 'flex:1', testo: 'Salva chiave',
+        onclick: () => {
+          const v = inputChiave.value.trim();
+          if (!v) { toast('Incolla la chiave prima di salvare'); return; }
+          aggiorna(s => { s.integrazioni.claudeApiKey = v; });
+          toast('Chiave salvata su questo dispositivo');
+        }
+      }),
+      chiaveAttuale ? h('button', {
+        class: 'btn pericolo', style: 'flex:1', testo: 'Rimuovi',
+        onclick: async () => {
+          if (!await conferma('Rimuovere la chiave salvata su questo dispositivo?')) return;
+          aggiorna(s => { s.integrazioni.claudeApiKey = null; });
+          toast('Chiave rimossa');
+        }
+      }) : null
+    ]),
+    h('small', { style: 'display:block;margin-top:8px;color:var(--testo-3)' },
+      'La chiave si crea su console.anthropic.com. Le chiamate a Claude vengono addebitate sul tuo account Anthropic, non su GymDiet.')
+  ]);
 }
 
 /** Svuota le cache e reinstalla il service worker: i tuoi dati restano. */

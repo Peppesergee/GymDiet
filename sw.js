@@ -1,7 +1,7 @@
 // Service worker: l'app funziona offline, ma gli aggiornamenti arrivano subito.
 // Strategia: prima la rete (con timeout), la cache come riserva. Con la
 // strategia opposta un file corretto restava invisibile per due avvii.
-const CACHE = 'gymdiet-v5';   // allineare a js/versione.js
+const CACHE = 'gymdiet-v6';   // allineare a js/versione.js
 const TIMEOUT_RETE = 3500;
 
 const RISORSE = [
@@ -14,6 +14,7 @@ const RISORSE = [
   './js/store.js',
   './js/genera.js',
   './js/versione.js',
+  './js/claude.js',
   './js/anim.js',
   './js/poses.js',
   './js/exercises.js',

@@ -50,9 +50,8 @@ export function render(ctx) {
     const lista = h('div');
     sessione.esercizi.forEach(voce => {
       const riga = rigaEsercizio(voce, v => apriEsercizio(v, {
-        profilo: p,
-        esclusi: stato.esclusiEsercizi,
-        onCambia: v2 => cambiaEsercizio(ctx, v2)
+        puoiCambiare: true,
+        ctx
       }), descrizioneParametri(voce));
       animazioniAttive.push(riga._anim);
       lista.appendChild(riga);
@@ -96,14 +95,6 @@ export function render(ctx) {
   ]));
 
   return radice;
-}
-
-function cambiaEsercizio(ctx, voce) {
-  ctx.aggiorna(s => {
-    s.offsets.allenamento[voce.chiave] = (s.offsets.allenamento[voce.chiave] || 0) + 1;
-    rigeneraScheda(s);
-  });
-  toast('Esercizio sostituito');
 }
 
 function etichettaAttrezzatura(a) {

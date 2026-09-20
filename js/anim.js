@@ -84,6 +84,15 @@ function disegnaScena(svg, scena) {
         g.appendChild(el('rect', { x: 40, y: 84, width: 26, height: 10, rx: 1, class: 'anim-oggetto' }));
         g.appendChild(el('line', { x1: 2, y1: 94, x2: 98, y2: 94, class: 'anim-pavimento' }));
         break;
+      case 'scottpanca':
+        // sedile
+        g.appendChild(el('rect', { x: 18, y: 76, width: 24, height: 4, rx: 1.5, class: 'anim-oggetto' }));
+        g.appendChild(el('line', { x1: 22, y1: 80, x2: 22, y2: 94, class: 'anim-oggetto-linea' }));
+        g.appendChild(el('line', { x1: 38, y1: 80, x2: 38, y2: 94, class: 'anim-oggetto-linea' }));
+        // cuscinetto inclinato su cui appoggia il braccio
+        g.appendChild(el('rect', { x: 42, y: 44, width: 30, height: 9, rx: 3, class: 'anim-oggetto', transform: 'rotate(58 42 44)' }));
+        g.appendChild(el('line', { x1: 2, y1: 94, x2: 98, y2: 94, class: 'anim-pavimento' }));
+        break;
     }
   }
   svg.appendChild(g);

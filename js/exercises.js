@@ -74,6 +74,27 @@ export const ESERCIZI = [
     respiro: 'Inspira scendendo, espira spingendo.', tempo: '2-1-1-0'
   },
   {
+    id: 'panca-inclinata-multipower', nome: 'Panca inclinata al multipower', gruppo: 'petto',
+    pattern: 'spinta-orizzontale', tipo: 'multi', livello: 2, anim: 'panca',
+    attrezzatura: ['palestra'], rischio: ['spalle'],
+    muscoli: { primari: ['Petto alto'], secondari: ['Deltoide anteriore', 'Tricipite'] },
+    setup: [
+      'Regola la panca inclinata a 30-40 gradi sotto la guida del multipower, in modo che la barra scenda in linea con la parte alta del petto.',
+      'Sdraiati con gli occhi sotto la barra, scapole retratte, piedi ben piantati a terra.'
+    ],
+    esecuzione: [
+      'Sblocca la barra ruotando i fermi e portala sopra il petto a braccia tese.',
+      'Scendi in controllo fino a sfiorare la parte alta del petto, gomiti a circa 45-60 gradi dal busto.',
+      'Spingi lungo la traiettoria fissa della guida fino a braccia quasi tese, poi riaggancia i fermi a fine serie.'
+    ],
+    errori: [
+      'Posizionare la panca troppo avanti o indietro rispetto alla barra: se il percorso guidato non e\' allineato al petto, la spinta scarica sulle spalle.',
+      'Rimbalzare la barra sul petto.'
+    ],
+    respiro: 'Inspira scendendo, espira spingendo.', tempo: '2-1-1-0',
+    varianti: 'Il percorso guidato toglie parte del lavoro di stabilizzazione: utile per spingere vicino al cedimento in sicurezza, anche senza un compagno di spotting.'
+  },
+  {
     id: 'croci-manubri', nome: 'Croci su panca', gruppo: 'petto',
     pattern: 'isolamento-petto', tipo: 'isolamento', livello: 1, anim: 'croci',
     attrezzatura: ['palestra', 'casa'], rischio: ['spalle'],
@@ -244,6 +265,27 @@ export const ESERCIZI = [
     esecuzione: ['Spingi verso l\'alto avvicinando i manubri senza farli sbattere.', 'Scendi fino a gomiti a 90°.'],
     errori: ['Gomiti troppo aperti sul piano frontale.', 'Bloccare la respirazione.'],
     respiro: 'Espira spingendo.', tempo: '2-0-1-0'
+  },
+  {
+    id: 'shoulder-press-manubri-seduto', nome: 'Shoulder press con manubri (seduto)', gruppo: 'spalle',
+    pattern: 'spinta-verticale', tipo: 'multi', livello: 1, anim: 'militare',
+    attrezzatura: ['palestra', 'casa'], rischio: [],
+    muscoli: { primari: ['Deltoide anteriore'], secondari: ['Deltoide laterale', 'Tricipite'] },
+    setup: [
+      'Seduto su panca con schienale verticale o quasi, schiena ben appoggiata dall\'inizio alla fine della serie.',
+      'Manubri sollevati all\'altezza delle orecchie, gomiti leggermente avanti rispetto alle spalle.'
+    ],
+    esecuzione: [
+      'Spingi i manubri verso l\'alto avvicinandoli senza farli toccare.',
+      'Estendi quasi completamente le braccia in alto, senza bloccare violentemente i gomiti.',
+      'Scendi controllato fino a gomiti poco sotto le spalle.'
+    ],
+    errori: [
+      'Inarcare la lombare staccandola dallo schienale: e\' il segno che il carico e\' troppo alto.',
+      'Far scendere i gomiti troppo dietro il busto a fine discesa.'
+    ],
+    respiro: 'Espira spingendo, inspira scendendo.', tempo: '2-0-1-0',
+    varianti: 'Lo schienale toglie il lavoro di stabilizzazione della zona lombare: risulta piu\' isolato sulle spalle rispetto alla versione in piedi.'
   },
   {
     id: 'alzate-laterali', nome: 'Alzate laterali', gruppo: 'spalle',
@@ -456,6 +498,27 @@ export const ESERCIZI = [
     esecuzione: ['Fletti supinando il polso durante la salita.', 'Contrai in alto 1 secondo.', 'Scendi controllato.'],
     errori: ['Oscillare il busto.'],
     respiro: 'Espira salendo.', tempo: '3-1-1-1'
+  },
+  {
+    id: 'scott-bilanciere', nome: 'Panca Scott con bilanciere', gruppo: 'bicipiti',
+    pattern: 'isolamento-bicipiti', tipo: 'isolamento', livello: 2, anim: 'scott',
+    attrezzatura: ['palestra'], rischio: [],
+    muscoli: { primari: ['Bicipite brachiale'], secondari: ['Brachiale', 'Avambraccio'] },
+    setup: [
+      'Siediti alla panca Scott con la parte alta delle braccia appoggiata sul cuscinetto inclinato, ascelle vicine al bordo superiore.',
+      'Presa supina larghezza spalle sul bilanciere (o bilanciere EZ).'
+    ],
+    esecuzione: [
+      'Parti con le braccia quasi distese, senza bloccare i gomiti.',
+      'Fletti portando il bilanciere verso le spalle, mantenendo sempre il braccio appoggiato al cuscinetto.',
+      'Scendi in 3 secondi senza staccare le braccia dal cuscinetto ne\' bloccare di scatto in basso.'
+    ],
+    errori: [
+      'Estendere completamente il gomito in basso scaricando lo stress sul tendine.',
+      'Sollevare le spalle o staccare le braccia dal cuscinetto per completare la ripetizione.'
+    ],
+    respiro: 'Espira salendo, inspira scendendo.', tempo: '3-0-1-1',
+    varianti: 'La posizione fissa del braccio isola il bicipite togliendo lo slancio: usa un carico piu\' basso rispetto al curl in piedi.'
   },
   {
     id: 'hammer-curl', nome: 'Hammer curl', gruppo: 'bicipiti',

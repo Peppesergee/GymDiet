@@ -1,7 +1,7 @@
 // Vista "Progressi": peso, misure, storico allenamenti, record.
 import { h, sezione, toast, conferma, num, foglio } from '../ui.js';
 import { oggiISO, dataItaliana } from '../store.js';
-import { ESERCIZI_BY_ID } from '../exercises.js';
+import { dettaglioEsercizio } from '../allenamento.js';
 
 export function render(ctx) {
   const { stato, aggiorna } = ctx;
@@ -174,7 +174,7 @@ function calcolaRecord(sessioni) {
         if (!migliori[e.esercizioId] || stimato > migliori[e.esercizioId].stimato) {
           migliori[e.esercizioId] = {
             esercizioId: e.esercizioId,
-            nome: (ESERCIZI_BY_ID[e.esercizioId] || {}).nome || e.nome,
+            nome: (dettaglioEsercizio(e.esercizioId) || {}).nome || e.nome,
             peso, rip, stimato, data: s.data
           };
         }

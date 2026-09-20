@@ -100,6 +100,14 @@ function hash(str) {
   return h >>> 0;
 }
 
+// Esercizi creati con l'aiuto di Claude: vivono nello stato dell'utente, non
+// nel database condiviso. Il resto del modulo li tratta come se ci fossero
+// sempre stati, tramite questa piccola cache sincronizzata da app.js a ogni
+// cambio di stato.
+let personalizzatiCorrenti = {};
+export function impostaPersonalizzati(mappa) { personalizzatiCorrenti = mappa || {}; }
+function risolviEsercizio(id) { return ESERCIZI_BY_ID[id] || personalizzatiCorrenti[id] || null; }
+
 function livelloMax(esperienza) {
   return esperienza === 'avanzato' ? 3 : esperienza === 'intermedio' ? 3 : 2;
 }
@@ -115,6 +123,23 @@ export function candidatiPer(pattern, opzioni) {
     !esclusi.includes(e.id) &&
     !(e.rischio || []).some(r => limitazioni.includes(r))
   ).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/**
+ * Cerca per nome in tutto il database (curato + personalizzati), senza i
+ * filtri di attrezzatura/livello: usata dalla ricerca libera nel selettore
+ * di sostituzione, dove l'utente sta scegliendo deliberatamente.
+ */
+export function cercaEsercizi(testo, limite = 20) {
+  const q = String(testo || '').trim().toLowerCase();
+  if (q.length < 2) return [];
+  const normalizza = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const qn = normalizza(q);
+  const tutti = [...ESERCIZI, ...Object.values(personalizzatiCorrenti)];
+  return tutti
+    .filter(e => normalizza(e.nome).includes(qn))
+    .sort((a, b) => a.nome.localeCompare(b.nome))
+    .slice(0, limite);
 }
 
 function numeroEsercizi(durata) {
@@ -162,6 +187,7 @@ export function generaScheda(profilo, opzioni = {}) {
   const seed = opzioni.seed || 'gymdiet';
   const offsets = opzioni.offsets || {};
   const esclusi = opzioni.esclusi || [];
+  const override = opzioni.override || {};
 
   let chiaveSplit = giorni;
   if (giorni === 3 && esperienza !== 'principiante') chiaveSplit = 3.5;
@@ -194,20 +220,26 @@ export function generaScheda(profilo, opzioni = {}) {
     const esercizi = [];
     for (const pattern of slot) {
       if (esercizi.length >= nEx) break;
-      const lista = candidatiPer(pattern, { ...profilo, esclusi });
-      if (!lista.length) continue;
       const chiave = `${chiaveSess}${idx}.${pattern}.${esercizi.length}`;
       const off = offsets[chiave] || 0;
-      let scelto = null;
-      // prima scelta: esercizio non usato oggi ne' nella stessa seduta della settimana scorsa
-      for (const evitaRipetizioni of [true, false]) {
-        for (let i = 0; i < lista.length; i++) {
-          const cand = lista[(hash(seed + chiave) + off + (occorrenza - 1) + i) % lista.length];
-          if (usati.has(cand.id)) continue;
-          if (evitaRipetizioni && precedenti.has(cand.id)) continue;
-          scelto = cand; break;
+      // una sostituzione scelta esplicitamente dall'utente vince sempre sulla
+      // selezione algoritmica, anche se l'esercizio non passerebbe i filtri
+      // del profilo (attrezzatura/livello): l'ha scelto lui apposta
+      let scelto = override[chiave] ? risolviEsercizio(override[chiave]) : null;
+      if (scelto && usati.has(scelto.id)) scelto = null;
+      if (!scelto) {
+        const lista = candidatiPer(pattern, { ...profilo, esclusi });
+        if (!lista.length) continue;
+        // prima scelta: esercizio non usato oggi ne' nella stessa seduta della settimana scorsa
+        for (const evitaRipetizioni of [true, false]) {
+          for (let i = 0; i < lista.length; i++) {
+            const cand = lista[(hash(seed + chiave) + off + (occorrenza - 1) + i) % lista.length];
+            if (usati.has(cand.id)) continue;
+            if (evitaRipetizioni && precedenti.has(cand.id)) continue;
+            scelto = cand; break;
+          }
+          if (scelto) break;
         }
-        if (scelto) break;
       }
       if (!scelto) continue;
       usati.add(scelto.id);
@@ -322,5 +354,5 @@ export function alternativeEsercizio(pattern, profilo, esclusi) {
 }
 
 export function dettaglioEsercizio(id) {
-  return ESERCIZI_BY_ID[id] || null;
+  return risolviEsercizio(id);
 }

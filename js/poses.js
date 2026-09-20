@@ -350,6 +350,18 @@ export const ANIMAZIONI = {
       P({ head: [78, 68], neck: [73, 71], shoulder: [69, 73], elbow: [70, 82], wrist: [71, 92],
           hip: [45, 80], knee: [31, 86], ankle: [18, 91], toe: [13, 93] })
     ]
+  },
+  scott: {
+    scena: ['pavimento', 'scottpanca'],
+    attrezzo: { tipo: 'bilanciere', ancora: 'wrist' },
+    // il gomito resta fermo sul cuscinetto: cambia solo l'angolo dell'avambraccio
+    fasi: ['Braccia quasi distese', 'Contrazione'],
+    pose: [
+      P({ head: [24, 50], neck: [28, 54], shoulder: [32, 58], elbow: [50, 60], wrist: [58, 78],
+          hip: [28, 80], knee: [44, 84], ankle: [58, 92], toe: [64, 90] }),
+      P({ head: [24, 50], neck: [28, 54], shoulder: [32, 58], elbow: [50, 60], wrist: [40, 46],
+          hip: [28, 80], knee: [44, 84], ankle: [58, 92], toe: [64, 90] })
+    ]
   }
 };
 

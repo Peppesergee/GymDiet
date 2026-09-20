@@ -63,6 +63,12 @@ spuntare, le calorie già assunte, la registrazione rapida del peso e il contegg
 - Durante l'allenamento registri **peso e ripetizioni per ogni serie**; ogni seduta passata resta
   modificabile dallo storico in Progressi, e per ogni esercizio puoi aprire un grafico con
   l'andamento del carico nel tempo (tasto "📈 Andamento", sia in allenamento sia nei record).
+- Ogni esercizio si puo' **sostituire in modo permanente**: dal database curato (con ricerca libera,
+  non solo le alternative suggerite), oppure — se non lo trovi — chiedendolo a Claude, che compila
+  una scheda tecnica completa sul momento (serve una chiave API personale, inserita dal Profilo e
+  usata solo per chiamate dirette dal telefono, mai su un server di GymDiet). La sostituzione resta
+  fissa anche rigenerando la scheda, e puoi scegliere di portare con te pesi e storico del vecchio
+  esercizio su quello nuovo.
 - Sedute dello stesso tipo nella settimana usano esercizi diversi, per varietà.
 - Modalità allenamento: registri carico e ripetizioni serie per serie, con **timer di recupero**
   (con segnale acustico) e suggerimento di progressione basato sulla seduta precedente.

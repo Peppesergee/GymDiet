@@ -12,7 +12,8 @@ export function rigeneraScheda(stato) {
   stato.scheda = generaScheda(stato.profilo, {
     seed: stato.semi.allenamento,
     offsets: stato.offsets.allenamento,
-    esclusi: stato.esclusiEsercizi
+    esclusi: stato.esclusiEsercizi,
+    override: (stato.override && stato.override.allenamento) || {}
   });
   return stato.scheda;
 }
@@ -36,6 +37,43 @@ export function rigeneraDieta(stato) {
 export function rigeneraTutto(stato) {
   rigeneraScheda(stato);
   rigeneraDieta(stato);
+}
+
+/**
+ * Sostituisce in modo permanente l'esercizio di uno slot della scheda con uno
+ * scelto esplicitamente dall'utente (dal database curato, o creato al volo
+ * con l'aiuto di Claude). A differenza del "cambia esercizio" algoritmico,
+ * questa scelta resta fissa anche rigenerando la scheda in futuro.
+ *
+ * @param stato lo stato dell'app (mutato sul posto)
+ * @param voce la voce della scheda da sostituire (serve voce.chiave e voce.esercizioId)
+ * @param nuovoEsercizio l'esercizio scelto: { id, nome, ... }, gia' presente nel
+ *   database curato oppure da salvare tra i personalizzati
+ * @param opzioni.mantieniStorico se true, ogni seduta passata registrata sul
+ *   vecchio esercizio viene "ereditata" dal nuovo: stesso id, stessa storia
+ */
+export function sostituisciEsercizioScheda(stato, voce, nuovoEsercizio, opzioni = {}) {
+  const vecchioId = voce.esercizioId;
+  const nuovoId = nuovoEsercizio.id;
+
+  if (nuovoEsercizio.personalizzato) {
+    stato.personalizzati[nuovoId] = nuovoEsercizio;
+  }
+
+  stato.override.allenamento[voce.chiave] = nuovoId;
+
+  if (opzioni.mantieniStorico && vecchioId && vecchioId !== nuovoId) {
+    for (const sessione of stato.log.sessioni) {
+      for (const es of sessione.esercizi || []) {
+        if (es.esercizioId === vecchioId) {
+          es.esercizioId = nuovoId;
+          es.nome = nuovoEsercizio.nome;
+        }
+      }
+    }
+  }
+
+  rigeneraScheda(stato);
 }
 
 export function nuovoSeme() {

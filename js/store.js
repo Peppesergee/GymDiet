@@ -32,8 +32,12 @@ export const STATO_INIZIALE = {
   dieta: null,
   semi: { allenamento: 'a1', dieta: 'd1' },
   offsets: { allenamento: {}, dieta: {} },
-  override: { dieta: {} },
+  override: { dieta: {}, allenamento: {} },
   esclusiEsercizi: [],
+  // esercizi creati al volo con l'aiuto di Claude, tenuti fuori dal database
+  // condiviso dell'app: { [id]: { nome, gruppo, pattern, tipo, livello, ... } }
+  personalizzati: {},
+  integrazioni: { claudeApiKey: null },
   log: {
     sessioni: [],      // { id, data, sessioneId, nome, esercizi: [{ esercizioId, serie: [{peso, rip}] }], durataMin }
     pesi: [],          // { data, valore }
@@ -107,7 +111,12 @@ export function ascolta(fn) {
 }
 
 export function esporta() {
-  return JSON.stringify({ ...stato, esportatoIl: new Date().toISOString() }, null, 2);
+  // la chiave API di Claude e' un segreto legato al dispositivo: non deve
+  // finire in un file di backup che potrebbe essere condiviso o salvato
+  // altrove. Chi importa il backup la reinserisce a mano, se le serve.
+  const { integrazioni, ...restante } = stato;
+  const senzaChiave = { ...restante, integrazioni: { ...integrazioni, claudeApiKey: null } };
+  return JSON.stringify({ ...senzaChiave, esportatoIl: new Date().toISOString() }, null, 2);
 }
 
 export function importa(testo) {

@@ -1,6 +1,7 @@
 // Bootstrap dell'applicazione: navigazione e rendering delle viste.
 import { h, svuota, icona } from './ui.js';
 import { getStato, aggiorna, ascolta, indiceGiorno } from './store.js';
+import { impostaPersonalizzati } from './allenamento.js';
 import * as vistaOggi from './views/oggi.js';
 import * as vistaScheda from './views/scheda.js';
 import * as vistaDieta from './views/dietaview.js';
@@ -45,6 +46,7 @@ function disegnaNav(attiva) {
 
 function disegna() {
   const stato = getStato();
+  impostaPersonalizzati(stato.personalizzati);
   vistaScheda.pulisci();
   svuota(contenuto);
   svuota(intestazione);
