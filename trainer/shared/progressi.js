@@ -1,6 +1,6 @@
 // Calcoli sullo storico degli allenamenti (isomorfi, nessuna dipendenza dal DOM).
 
-/** Ultima seduta in cui il cliente ha registrato quell'esercizio. */
+/** Ultima seduta in cui l’atleta ha registrato quell'esercizio. */
 export function ultimoCarico(sedute, esercizioId) {
   const ordinate = [...sedute].sort((a, b) => b.data.localeCompare(a.data));
   for (const s of ordinate) {

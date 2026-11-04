@@ -1,6 +1,8 @@
 // Modello dati condiviso tra interfacce e backend: stessi campi, stessa
 // validazione. Il server lo usa per rifiutare input non validi, le
 // interfacce per mostrare l'errore prima ancora di inviare.
+import { GRUPPI } from './exercises.js';
+import { ANIMAZIONI } from './poses.js';
 
 export const OBIETTIVI = {
   massa: 'Massa muscolare',
@@ -37,10 +39,10 @@ function scelta(v, ammessi, campo) {
 }
 
 /**
- * Normalizza i dati di un cliente. Con `parziale` valida solo i campi
+ * Normalizza i dati di un atleta. Con `parziale` valida solo i campi
  * presenti (per gli aggiornamenti), altrimenti completa con i predefiniti.
  */
-export function normalizzaCliente(input, { parziale = false } = {}) {
+export function normalizzaAtleta(input, { parziale = false } = {}) {
   const d = input || {};
   const out = {};
   const ha = k => Object.prototype.hasOwnProperty.call(d, k);
@@ -48,7 +50,7 @@ export function normalizzaCliente(input, { parziale = false } = {}) {
 
   if (!parziale || ha('nome')) {
     out.nome = testo(d.nome, 100);
-    if (!out.nome) throw new ErroreValidazione('Il nome del cliente e\' obbligatorio', 'nome');
+    if (!out.nome) throw new ErroreValidazione('Il nome dell’atleta e\' obbligatorio', 'nome');
   }
   if (ha('email')) out.email = testo(d.email, 160);
   if (ha('telefono')) out.telefono = testo(d.telefono, 40);
@@ -107,4 +109,74 @@ export function validaSeduta(d) {
     note: testo(d.note, 2000),
     esercizi
   };
+}
+
+// ------------------------------------------------------------ esercizi personali
+export const TIPI_ESERCIZIO = { multi: 'Multiarticolare', isolamento: 'Isolamento', isometrico: 'Isometrico (tenuta)', cardio: 'Cardio' };
+
+// figure animate disponibili, con un nome comprensibile per il trainer
+export const FIGURE = {
+  squat: 'Squat', panca: 'Distensioni su panca', croci: 'Croci', pushup: 'Piegamenti', dip: 'Dip',
+  trazioni: 'Trazioni', lat: 'Lat machine', rematore: 'Rematore', pulley: 'Pulley', facepull: 'Face pull',
+  militare: 'Spinta sopra la testa', alzate: 'Alzate laterali', curl: 'Curl', scott: 'Panca Scott',
+  french: 'French press', pushdown: 'Push-down', stacco: 'Stacco', hipthrust: 'Hip thrust', affondo: 'Affondo',
+  pressa: 'Pressa', legext: 'Leg extension', legcurl: 'Leg curl', calf: 'Polpacci', plank: 'Plank',
+  crunch: 'Crunch', legraise: 'Leg raise', twist: 'Torsioni', mountain: 'Mountain climber',
+  camminata: 'Camminata / corsa', jack: 'Jumping jack', burpee: 'Burpee'
+};
+
+// schema motorio usato per proporre alternative simili
+const PATTERN_DA_GRUPPO = {
+  petto: 'isolamento-petto', dorso: 'isolamento-dorso', spalle: 'isolamento-spalle',
+  bicipiti: 'isolamento-bicipiti', tricipiti: 'isolamento-tricipiti', quadricipiti: 'isolamento-quad',
+  femorali: 'isolamento-femorali', glutei: 'hinge', polpacci: 'isolamento-polpacci',
+  core: 'core-flessione', cardio: 'cardio-liss'
+};
+
+const righe = (v, max = 8) => (Array.isArray(v) ? v : String(v || '').split('\n'))
+  .map(x => testo(x, 300)).filter(Boolean).slice(0, max);
+
+/** Esercizio creato a mano dal trainer, nello stesso formato del catalogo. */
+export function validaEsercizioPersonale(d = {}) {
+  const nome = testo(d.nome, 80);
+  if (nome.length < 2) throw new ErroreValidazione('Dai un nome all\'esercizio', 'nome');
+  const gruppo = Object.prototype.hasOwnProperty.call(GRUPPI, d.gruppo) ? d.gruppo : null;
+  if (!gruppo) throw new ErroreValidazione('Scegli il gruppo muscolare', 'gruppo');
+  const tipo = Object.prototype.hasOwnProperty.call(TIPI_ESERCIZIO, d.tipo) ? d.tipo : 'isolamento';
+  const anim = Object.prototype.hasOwnProperty.call(ANIMAZIONI, d.anim) ? d.anim : 'squat';
+  const esecuzione = righe(d.esecuzione);
+  if (!esecuzione.length) throw new ErroreValidazione('Scrivi almeno un passaggio dell\'esecuzione', 'esecuzione');
+  return {
+    nome, gruppo, tipo, anim,
+    pattern: PATTERN_DA_GRUPPO[gruppo], livello: 2,
+    attrezzatura: ['palestra', 'casa', 'libero'], rischio: [],
+    muscoli: { primari: righe(d.muscoli?.primari ?? d.muscoli, 4), secondari: [] },
+    setup: righe(d.setup), esecuzione, errori: righe(d.errori),
+    respiro: testo(d.respiro, 200), tempo: testo(d.tempo, 20), varianti: '',
+    durata: tipo === 'isometrico' || tipo === 'cardio'
+  };
+}
+
+// ------------------------------------------------------------ inviti atleta
+// Codice di 8 caratteri senza simboli ambigui (niente 0/O, 1/I), mostrato come XXXX-XXXX.
+export const ALFABETO_CODICE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export const GIORNI_VALIDITA_INVITO = 7;
+
+export function normalizzaCodice(codice) {
+  return String(codice || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+export function formattaCodice(codice) {
+  const c = normalizzaCodice(codice);
+  return c.slice(0, 4) + '-' + c.slice(4);
+}
+/** byte casuali -> codice (la sorgente dei byte la sceglie chi chiama). */
+export function codiceDaByte(byte) {
+  return Array.from(byte.slice(0, 8), b => ALFABETO_CODICE[b % 32]).join('');
+}
+
+export function validaCredenziali(email, password) {
+  const e = String(email || '').trim().toLowerCase().slice(0, 160);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new ErroreValidazione('Email non valida', 'email');
+  if (String(password || '').length < 8) throw new ErroreValidazione('La password deve avere almeno 8 caratteri', 'password');
+  return { email: e, password: String(password) };
 }

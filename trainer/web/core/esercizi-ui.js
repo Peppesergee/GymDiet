@@ -1,8 +1,9 @@
 // Pezzi di interfaccia sugli esercizi riusati dalle tre UI: scheda tecnica
-// ("come si fa") e selettore con ricerca e generazione tramite Claude.
+// ("come si fa"), selettore con ricerca e creazione di esercizi personalizzati.
 import { h, svuota, finestra, avviso } from './dom.js';
 import { creaAnimazione, miniatura } from '../../shared/anim.js';
 import { catalogo, cerca, GRUPPI, messaggioErrore } from './servizi.js';
+import { TIPI_ESERCIZIO, FIGURE, validaEsercizioPersonale } from '../../shared/modello.js';
 
 function elenco(titolo, voci) {
   if (!voci || !voci.length) return null;
@@ -47,7 +48,7 @@ export function rigaEsercizio(es, { azione, etichetta = 'Scegli', extra } = {}) 
 }
 
 /**
- * Selettore: suggeriti (stesso schema motorio), ricerca libera, Claude.
+ * Selettore: suggeriti (stesso schema motorio), ricerca libera, esercizio nuovo.
  * Ritorna una Promise con l'esercizio scelto o null.
  */
 export function scegliEsercizio(ctx, { titolo = 'Scegli esercizio', suggeriti = [] } = {}) {
@@ -63,7 +64,10 @@ export function scegliEsercizio(ctx, { titolo = 'Scegli esercizio', suggeriti = 
         svuota(risultati,
           h('p', { class: 'gc-tenue gc-piccolo', testo: q.length >= 2 ? `${lista.length} risultati` : (suggeriti.length ? 'Stesso schema motorio' : 'Dal catalogo') }),
           lista.map(es => rigaEsercizio(es, { azione: scegli })),
-          q.length >= 2 ? bloccoClaude(ctx, q, scegli) : null
+          h('div', { class: 'gc-nuovo-es' }, [
+            h('span', { class: 'gc-tenue', testo: 'Non lo trovi nel catalogo?' }),
+            h('button', { class: 'gc-btn', type: 'button', testo: q.length >= 2 ? `Crea "${q}"` : 'Crea esercizio', onclick: async () => { const es = await creaEsercizio(ctx, q); if (es) scegli(es); } })
+          ])
         );
       };
       let t; input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(mostra, 150); });
@@ -74,23 +78,55 @@ export function scegliEsercizio(ctx, { titolo = 'Scegli esercizio', suggeriti = 
   });
 }
 
-function bloccoClaude(ctx, testo, scegli) {
-  const stato = h('p', { class: 'gc-tenue gc-piccolo' });
-  const btn = h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: `Crea "${testo}" con Claude` });
-  btn.onclick = async () => {
-    btn.disabled = true;
-    stato.textContent = 'Claude sta scrivendo la scheda tecnica…';
-    try {
-      const es = await ctx.api.generaEsercizio(testo);
-      await ctx.ricaricaPersonali();
-      avviso(`${es.nome} aggiunto ai tuoi esercizi`);
-      scegli(es);
-    } catch (e) {
-      stato.textContent = messaggioErrore(e);
-      btn.disabled = false;
-    }
-  };
-  return h('div', { class: 'gc-claude' }, [
-    h('p', { testo: 'Non lo trovi? Claude compila la scheda tecnica e la salva tra i tuoi esercizi.' }), btn, stato
-  ]);
+/**
+ * Esercizio personalizzato scritto dal trainer: nome, muscolo, figura
+ * animata piu' simile e istruzioni. Lo vedono anche i suoi atleti.
+ * Ritorna una Promise con l'esercizio salvato, o null.
+ */
+export function creaEsercizio(ctx, nomeIniziale = '') {
+  return new Promise(risolvi => {
+    let salvato = null;
+    const opz = (m, sel) => Object.entries(m).map(([k, v]) => h('option', { value: k, selected: k === sel, testo: typeof v === 'string' ? v : v.nome }));
+    const els = {
+      nome: h('input', { id: 'ne-nome', value: nomeIniziale, required: true, autocomplete: 'off' }),
+      gruppo: h('select', { id: 'ne-gruppo' }, opz(GRUPPI, 'petto')),
+      tipo: h('select', { id: 'ne-tipo' }, opz(TIPI_ESERCIZIO, 'isolamento')),
+      anim: h('select', { id: 'ne-anim' }, opz(FIGURE, 'panca')),
+      setup: h('textarea', { id: 'ne-setup', rows: 2, placeholder: 'Una indicazione per riga' }),
+      esecuzione: h('textarea', { id: 'ne-esecuzione', rows: 3, placeholder: 'Una indicazione per riga', required: true }),
+      errori: h('textarea', { id: 'ne-errori', rows: 2, placeholder: 'Una indicazione per riga' })
+    };
+    const anteprima = h('div', { class: 'gc-ne-anteprima', html: miniatura('panca') });
+    els.anim.onchange = () => { anteprima.innerHTML = miniatura(els.anim.value); };
+    const errore = h('p', { class: 'gc-errore', role: 'alert' });
+    const campo = (id, t, el) => h('label', { class: 'gc-campo', for: id }, [t, el]);
+    finestra('Nuovo esercizio', chiudi => {
+      const form = h('form', { class: 'gc-form-cliente', novalidate: true }, [
+        campo('ne-nome', 'Nome', els.nome),
+        h('div', { class: 'gc-griglia-campi' }, [campo('ne-gruppo', 'Muscolo principale', els.gruppo), campo('ne-tipo', 'Tipo', els.tipo)]),
+        h('div', { class: 'gc-ne-figura' }, [campo('ne-anim', 'Figura animata piu\u2019 simile', els.anim), anteprima]),
+        campo('ne-setup', 'Posizione di partenza', els.setup),
+        campo('ne-esecuzione', 'Esecuzione', els.esecuzione),
+        campo('ne-errori', 'Errori da evitare', els.errori),
+        errore,
+        h('div', { class: 'gc-azioni' }, [h('button', { class: 'gc-btn gc-btn-primario', type: 'submit', testo: 'Salva esercizio' })])
+      ]);
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        errore.textContent = '';
+        const dati = Object.fromEntries(Object.entries(els).map(([k, el]) => [k, el.value]));
+        const btn = form.querySelector('[type=submit]');
+        try {
+          validaEsercizioPersonale(dati);
+          btn.disabled = true;
+          salvato = await ctx.api.creaEsercizio(dati);
+          await ctx.ricaricaPersonali();
+          avviso(`${salvato.nome} aggiunto ai tuoi esercizi`);
+          chiudi();
+        } catch (x) { errore.textContent = messaggioErrore(x); btn.disabled = false; }
+      });
+      setTimeout(() => els.nome.focus(), 50);
+      return form;
+    }, { alChiudere: () => risolvi(salvato) });
+  });
 }

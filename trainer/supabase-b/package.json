@@ -2,11 +2,10 @@
   "name": "gymcoach-supabase-b",
   "version": "0.1.0",
   "private": true,
-  "description": "GymCoach, architettura B: Supabase (Postgres + Auth + RLS + Edge Functions)",
+  "description": "GymCoach, architettura B: Supabase (Postgres + Auth + RLS)",
   "type": "module",
   "scripts": {
-    "test": "node --test test/*.test.mjs",
-    "sincronizza": "node sincronizza-shared.mjs"
+    "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.15"

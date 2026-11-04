@@ -124,10 +124,11 @@ js/
 
 ## GymCoach (versione per personal trainer)
 
-Nella cartella [`trainer/`](trainer/README.md) c'e' un prototipo multi-trainer
-derivato da questa app: solo allenamento, due architetture backend (Node +
-SQLite, Supabase) e tre interfacce (Studio, Campo, Builder). Non tocca l'app
-personale.
+Nella cartella [`trainer/`](trainer/README.md) c'e' un prototipo derivato da
+questa app: solo allenamento, una versione per personal trainer (che creano le
+schede dei propri atleti) e una per gli atleti (che vedono la scheda e
+registrano i progressi), con due architetture backend alternative. Non tocca
+l'app personale.
 
 ## Nota
 

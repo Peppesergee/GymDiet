@@ -1,38 +1,38 @@
 // Interfaccia 3 · Builder: editor di schede. Libreria a sinistra, tavolo di
 // lavoro al centro (trascina per aggiungere e riordinare), a destra
-// l'anteprima di come la vedra' il cliente sul telefono.
+// l'anteprima di come la vedra' l’atleta sul telefono.
 import { avvia } from '../core/avvio.js';
 import { h, svuota, avviso, chiediConferma } from '../core/dom.js';
 import { bozzaProgramma, programmaAttivo, catalogo, cerca, trova, GRUPPI, messaggioErrore } from '../core/servizi.js';
-import { apriSchedaTecnica, scegliEsercizio } from '../core/esercizi-ui.js';
+import { apriSchedaTecnica, scegliEsercizio, creaEsercizio } from '../core/esercizi-ui.js';
 import { creaAnimazione, miniatura } from '../../shared/anim.js';
 import { aggiungiEsercizio, sostituisciEsercizio, rimuoviEsercizio, spostaEsercizio, modificaVoce, schedaVuota } from '../../shared/programmi.js';
 import { GIORNI } from '../../shared/modello.js';
 
 avvia(document.getElementById('app'), async ctx => {
-  const clienti = await ctx.api.elencoClienti();
+  const atleti = await ctx.api.elencoAtleti();
   const stato = {
-    cliente: null, programma: null, scheda: null, nome: '', statoProg: 'bozza',
+    atleta: null, programma: null, scheda: null, nome: '', statoProg: 'bozza',
     giorno: 0, sporco: false, gruppo: null, q: '', anteprimaIdx: 0, vista: 'tavolo'
   };
   let animAnteprima = null;
 
   // ------------------------------------------------------------ struttura
-  const selCliente = h('select', { id: 'bd-cliente', 'aria-label': 'Cliente' }, clienti.map(c => h('option', { value: c.id, testo: c.nome })));
+  const selAtleta = h('select', { id: 'bd-atleta', 'aria-label': 'Atleta' }, atleti.map(c => h('option', { value: c.id, testo: c.nome })));
   const inNome = h('input', { class: 'bd-nome', id: 'bd-nome', 'aria-label': 'Nome del programma', placeholder: 'Nome del programma' });
-  const selStato = h('select', { id: 'bd-stato', 'aria-label': 'Stato' }, [h('option', { value: 'bozza', testo: 'Bozza' }), h('option', { value: 'attivo', testo: 'Attivo (lo vede il cliente)' })]);
+  const selStato = h('select', { id: 'bd-stato', 'aria-label': 'Stato' }, [h('option', { value: 'bozza', testo: 'Bozza' }), h('option', { value: 'attivo', testo: 'Attivo (lo vede l’atleta)' })]);
   const indicatore = h('span', { class: 'bd-stato-salva' });
   const btnSalva = h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: 'Salva' });
   const colLib = h('section', { class: 'bd-col bd-col-lib', 'aria-label': 'Libreria esercizi' });
   const colTavolo = h('section', { class: 'bd-col bd-col-tavolo', 'aria-label': 'Programma' });
-  const colAnteprima = h('section', { class: 'bd-col bd-col-anteprima', 'aria-label': 'Anteprima cliente' });
+  const colAnteprima = h('section', { class: 'bd-col bd-col-anteprima', 'aria-label': 'Anteprima atleta' });
   const colonne = h('div', { class: 'bd-colonne', 'data-vista': stato.vista }, [colLib, colTavolo, colAnteprima]);
   const segmenti = h('div', { class: 'bd-segmenti', role: 'group', 'aria-label': 'Vista' });
 
   ctx.radice.append(h('div', { class: 'bd' }, [
     h('header', { class: 'bd-barra' }, [
       h('div', { class: 'bd-marchio', html: 'GymCoach <span>Builder</span>' }),
-      selCliente, inNome, selStato, indicatore,
+      selAtleta, inNome, selStato, indicatore,
       h('button', { class: 'gc-btn', type: 'button', testo: 'Bozza dal profilo', onclick: rigeneraBozza }),
       h('button', { class: 'gc-btn', type: 'button', testo: 'Da zero', onclick: daZero }),
       btnSalva
@@ -53,15 +53,15 @@ avvia(document.getElementById('app'), async ctx => {
   const cambia = nuova => { stato.scheda = nuova; segnaSporco(); disegnaTavolo(); disegnaAnteprima(); };
 
   // ------------------------------------------------------------ dati
-  async function caricaCliente(id) {
-    stato.cliente = await ctx.api.leggiCliente(id);
+  async function caricaAtleta(id) {
+    stato.atleta = await ctx.api.leggiAtleta(id);
     const programmi = await ctx.api.programmi(id);
     const p = programmaAttivo(programmi) || programmi[0] || null;
     stato.programma = p;
     if (p) {
       stato.scheda = structuredClone(p.scheda); stato.nome = p.nome; stato.statoProg = p.stato === 'archiviato' ? 'bozza' : p.stato;
     } else {
-      const b = bozzaProgramma(stato.cliente, ctx.personali);
+      const b = bozzaProgramma(stato.atleta, ctx.personali);
       stato.scheda = b.scheda; stato.nome = b.nome; stato.statoProg = 'bozza';
     }
     stato.giorno = 0; stato.anteprimaIdx = 0;
@@ -71,15 +71,15 @@ avvia(document.getElementById('app'), async ctx => {
   }
 
   async function rigeneraBozza() {
-    if (stato.sporco && !await chiediConferma('Sostituire la scheda sul tavolo con una nuova bozza generata dal profilo del cliente?', { si: 'Genera' })) return;
-    const b = bozzaProgramma(stato.cliente, ctx.personali);
+    if (stato.sporco && !await chiediConferma('Sostituire la scheda sul tavolo con una nuova bozza generata dal profilo dell’atleta?', { si: 'Genera' })) return;
+    const b = bozzaProgramma(stato.atleta, ctx.personali);
     stato.nome = b.nome; inNome.value = b.nome; stato.giorno = 0;
     cambia(b.scheda);
   }
   async function daZero() {
     if (stato.sporco && !await chiediConferma('Svuotare il tavolo e partire da una scheda vuota?', { si: 'Svuota' })) return;
     stato.giorno = 0;
-    cambia(schedaVuota(stato.cliente.giorniSettimana));
+    cambia(schedaVuota(stato.atleta.giorniSettimana));
   }
 
   btnSalva.onclick = async () => {
@@ -88,19 +88,19 @@ avvia(document.getElementById('app'), async ctx => {
     try {
       stato.programma = stato.programma && stato.programma.stato !== 'archiviato'
         ? await ctx.api.aggiornaProgramma(stato.programma.id, dati)
-        : await ctx.api.creaProgramma(stato.cliente.id, dati);
+        : await ctx.api.creaProgramma(stato.atleta.id, dati);
       segnaSporco(false);
-      avviso(dati.stato === 'attivo' ? `Programma attivo per ${stato.cliente.nome}` : 'Bozza salvata');
+      avviso(dati.stato === 'attivo' ? `Programma attivo per ${stato.atleta.nome}` : 'Bozza salvata');
     } catch (e) { avviso(messaggioErrore(e), 'errore'); }
     btnSalva.disabled = false;
   };
   inNome.oninput = () => segnaSporco();
   selStato.onchange = () => segnaSporco();
-  selCliente.onchange = async () => {
-    if (stato.sporco && !await chiediConferma('Ci sono modifiche non salvate. Cambiare cliente comunque?', { si: 'Cambia' })) {
-      selCliente.value = stato.cliente.id; return;
+  selAtleta.onchange = async () => {
+    if (stato.sporco && !await chiediConferma('Ci sono modifiche non salvate. Cambiare atleta comunque?', { si: 'Cambia' })) {
+      selAtleta.value = stato.atleta.id; return;
     }
-    caricaCliente(selCliente.value);
+    caricaAtleta(selAtleta.value);
   };
 
   // ------------------------------------------------------------ libreria
@@ -117,12 +117,10 @@ avvia(document.getElementById('app'), async ctx => {
       voce.addEventListener('dragstart', ev => { ev.dataTransfer.setData('text/gc-esercizio', e.id); ev.dataTransfer.effectAllowed = 'copy'; });
       return voce;
     }));
-    if (stato.q.length >= 2) {
-      listaLib.append(h('button', { class: 'gc-btn', type: 'button', style: 'margin-top:8px', testo: `Non c'e'? Crea "${stato.q}" con Claude`, onclick: async () => {
-        const e = await scegliEsercizio(ctx, { titolo: 'Crea con Claude' });
-        if (e) { aggiungi(e); disegnaLibreria(); }
-      } }));
-    }
+    listaLib.append(h('button', { class: 'gc-btn', type: 'button', style: 'margin-top:8px', testo: stato.q.length >= 2 ? `Non c'e'? Crea "${stato.q}"` : '+ Nuovo esercizio', onclick: async () => {
+      const e = await creaEsercizio(ctx, stato.q);
+      if (e) { aggiungi(e); disegnaLibreria(); }
+    } }));
   }
   const chips = h('div', { class: 'gc-chips', style: 'margin-top:8px' }, [[null, 'Tutti'], ...Object.entries(GRUPPI).map(([k, v]) => [k, v.nome])].map(([k, t]) =>
     h('button', { class: 'gc-chip', type: 'button', 'aria-pressed': String(k === stato.gruppo), testo: t, onclick: ev => {
@@ -135,7 +133,7 @@ avvia(document.getElementById('app'), async ctx => {
   );
 
   function aggiungi(es, posizione) {
-    cambia(aggiungiEsercizio(stato.scheda, stato.giorno, es, stato.cliente.obiettivo, posizione));
+    cambia(aggiungiEsercizio(stato.scheda, stato.giorno, es, stato.atleta.obiettivo, posizione));
     avviso(`${es.nome} aggiunto a ${stato.scheda.sessioni[stato.giorno].nome}`);
   }
 
@@ -172,7 +170,7 @@ avvia(document.getElementById('app'), async ctx => {
         h('span', { html: miniatura(v.anim) }),
         h('div', { class: 'bd-blocco-nome' }, [
           h('strong', { testo: `${i + 1}. ${v.nome}` }),
-          h('input', { value: v.note || '', placeholder: 'Nota per il cliente (es. presa stretta)', 'aria-label': `Nota ${v.nome}`, onchange: e => cambia(modificaVoce(stato.scheda, stato.giorno, i, { note: e.target.value })) })
+          h('input', { value: v.note || '', placeholder: 'Nota per l’atleta (es. presa stretta)', 'aria-label': `Nota ${v.nome}`, onchange: e => cambia(modificaVoce(stato.scheda, stato.giorno, i, { note: e.target.value })) })
         ]),
         h('div', { class: 'bd-numeri' }, [num('serie', 'serie', v.serie), num('ripetizioni', 'rip', v.ripetizioni, 'rip'), num('recupero', 'rec', v.recupero)]),
         h('div', { class: 'bd-strumenti' }, [
@@ -200,7 +198,7 @@ avvia(document.getElementById('app'), async ctx => {
     const totSerie = s.esercizi.reduce((t, v) => t + (Number(v.serie) || 0), 0);
     const gruppi = [...new Set(s.esercizi.map(v => GRUPPI[v.gruppo]?.nome).filter(Boolean))];
     svuota(colTavolo,
-      h('h2', { testo: `Scheda di ${stato.cliente.nome}` }),
+      h('h2', { testo: `Scheda di ${stato.atleta.nome}` }),
       h('div', { class: 'bd-giorni', role: 'tablist' }, [
         ...sessioni.map((x, i) => h('button', { class: 'bd-giorno', role: 'tab', type: 'button', 'aria-selected': String(i === stato.giorno), onclick: () => { stato.giorno = i; stato.anteprimaIdx = 0; disegnaTavolo(); disegnaAnteprima(); } }, [x.nome, h('small', { testo: GIORNI[x.giornoSuggerito] ?? '' })])),
         sessioni.length < 7 ? h('button', { class: 'bd-giorno', type: 'button', testo: '+ Giorno', onclick: () => {
@@ -237,7 +235,7 @@ avvia(document.getElementById('app'), async ctx => {
     const corrente = s.esercizi[stato.anteprimaIdx] || s.esercizi[0];
     const box = corrente ? h('div', { class: 'anim-box' }) : null;
     svuota(colAnteprima, h('div', { class: 'bd-anteprima' }, [
-      h('h2', { testo: 'Cosa vede il cliente' }),
+      h('h2', { testo: 'Cosa vede l’atleta nella sua app' }),
       h('div', { class: 'bd-telefono' }, h('div', { class: 'bd-schermo' }, [
         h('div', { class: 'bd-schermo-testa' }, [h('small', { testo: `${GIORNI[s.giornoSuggerito] ?? ''} · ~${s.durataStimata} min` }), h('h3', { testo: s.nome })]),
         box,
@@ -247,7 +245,7 @@ avvia(document.getElementById('app'), async ctx => {
           h('span', {}, [h('strong', { testo: v.nome }), h('small', { testo: `${v.serie} × ${v.ripetizioni}${v.recupero ? ` · ${v.recupero}s` : ''}` })])
         ]))
       ])),
-      h('p', { class: 'bd-didascalia', testo: stato.statoProg === 'attivo' || selStato.value === 'attivo' ? 'Salvato come attivo, il cliente lo trova nella sua app.' : 'In bozza: il cliente non lo vede ancora.' })
+      h('p', { class: 'bd-didascalia', testo: stato.statoProg === 'attivo' || selStato.value === 'attivo' ? 'Salvato come attivo, l’atleta lo trova nella sua app.' : 'In bozza: l’atleta non lo vede ancora.' })
     ]));
     if (box) animAnteprima = creaAnimazione(box, corrente.anim, { durata: 2800 });
   }
@@ -255,7 +253,7 @@ avvia(document.getElementById('app'), async ctx => {
   // ------------------------------------------------------------ via
   disegnaSegmenti();
   disegnaLibreria();
-  if (!clienti.length) { svuota(colTavolo, h('p', { class: 'bd-vuoto', testo: 'Aggiungi un cliente da Studio o Campo per iniziare.' })); return; }
-  await caricaCliente(clienti[0].id);
+  if (!atleti.length) { svuota(colTavolo, h('p', { class: 'bd-vuoto', testo: 'Aggiungi un atleta da Studio o Campo per iniziare.' })); return; }
+  await caricaAtleta(atleti[0].id);
   window.addEventListener('beforeunload', ev => { if (stato.sporco) { ev.preventDefault(); ev.returnValue = ''; } });
 });

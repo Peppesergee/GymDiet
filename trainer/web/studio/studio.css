@@ -112,7 +112,7 @@
 .st-andamento .delta { color: var(--gc-ok); font-weight: 700; }
 
 .st-profilo { max-width: 680px; background: var(--gc-superficie); border: 1px solid var(--gc-bordo); border-radius: var(--gc-raggio); padding: 18px; }
-.gc-form-cliente { display: grid; gap: 14px; }
+.gc-form-atleta { display: grid; gap: 14px; }
 
 .st-catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
 .st-catalogo button { display: flex; gap: 10px; align-items: center; text-align: left; background: var(--gc-superficie); border: 1px solid var(--gc-bordo); border-radius: var(--gc-raggio); padding: 10px; cursor: pointer; }
@@ -138,3 +138,4 @@
   .st-tabella td.col-ultima { grid-column: 1; font-size: .8rem; color: var(--gc-testo-2); padding-left: 44px; }
   .st-tabella td.col-stato { grid-row: 1; grid-column: 2; }
 }
+.st-azioni-atleta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

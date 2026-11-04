@@ -4,7 +4,8 @@
 import { scryptSync, randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 
 const DURATA_GIORNI = 30;
-export const COOKIE = 'gc_accesso';
+export const COOKIE = 'gc_accesso';          // trainer
+export const COOKIE_ATLETA = 'gc_atleta';   // app atleta: cookie distinto, le due sessioni non si mescolano
 
 export function hashPassword(password) {
   const sale = randomBytes(16);
@@ -22,10 +23,11 @@ export function verificaPassword(password, salvato) {
 
 export const hashToken = token => createHash('sha256').update(token).digest('hex');
 
-export function nuovoAccesso(db, trainerId) {
+/** Nuovo token di accesso; `salva(hash, scadenzaIso)` lo registra nel database. */
+export function nuovoAccesso(salva) {
   const token = randomBytes(32).toString('base64url');
   const scade = new Date(Date.now() + DURATA_GIORNI * 86400000);
-  db.creaAccesso(hashToken(token), trainerId, scade.toISOString());
+  salva(hashToken(token), scade.toISOString());
   return { token, scade };
 }
 
@@ -38,12 +40,12 @@ export function leggiCookie(req, nome) {
   return null;
 }
 
-export function cookieAccesso(token, scade, sicuro) {
-  return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${scade.toUTCString()}${sicuro ? '; Secure' : ''}`;
+export function cookieAccesso(token, scade, sicuro, nome = COOKIE) {
+  return `${nome}=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${scade.toUTCString()}${sicuro ? '; Secure' : ''}`;
 }
 
-export function cookieUscita(sicuro) {
-  return `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${sicuro ? '; Secure' : ''}`;
+export function cookieUscita(sicuro, nome = COOKIE) {
+  return `${nome}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${sicuro ? '; Secure' : ''}`;
 }
 
 /** Limite di tentativi per chiave (es. IP). In memoria: basta per un solo processo. */
