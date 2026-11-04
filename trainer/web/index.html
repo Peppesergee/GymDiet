@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>GymCoach</title>
+  <link rel="stylesheet" href="core/base.css">
+  <style>
+    :root {
+      --gc-sfondo: #f4f5f7; --gc-superficie: #fff; --gc-testo: #161a22; --gc-testo-2: #5d6573; --gc-bordo: #dadde3;
+      --gc-accento: #2448d8; --gc-accento-testo: #fff; --gc-ok: #1b7f4b; --gc-attenzione: #b25a00; --gc-pericolo: #c62d3a;
+      --gc-raggio: 12px; --gc-raggio-s: 8px; --gc-font: system-ui, -apple-system, "Segoe UI", sans-serif; --gc-font-titoli: var(--gc-font);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --gc-sfondo: #0f1218; --gc-superficie: #171b23; --gc-testo: #e7eaf0; --gc-testo-2: #98a1b0; --gc-bordo: #2a303b; --gc-accento: #7c9bff; --gc-accento-testo: #0b1330; color-scheme: dark; }
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 18px; }
+    h1 { font-size: 2rem; }
+    .scelte { display: grid; gap: 12px; }
+    .scelte a { display: grid; gap: 4px; padding: 16px 18px; background: var(--gc-superficie); border: 1px solid var(--gc-bordo); border-radius: var(--gc-raggio); color: inherit; text-decoration: none; }
+    .scelte a:hover { border-color: var(--gc-accento); }
+    .scelte strong { font-size: 1.1rem; }
+    #backend { font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div>
+      <h1>GymCoach</h1>
+      <p class="gc-tenue">Prototipo per personal trainer: stesso backend, tre interfacce.</p>
+      <p id="backend" class="gc-tenue"></p>
+    </div>
+    <nav class="scelte" aria-label="Interfacce">
+      <a href="studio/index.html"><strong>Studio</strong><span class="gc-tenue">Gestionale da scrivania: clienti, programmi modificabili, storico e grafici.</span></a>
+      <a href="campo/index.html"><strong>Campo</strong><span class="gc-tenue">Dal telefono in sala: agenda del giorno, un esercizio alla volta, carichi a un tocco.</span></a>
+      <a href="builder/index.html"><strong>Builder</strong><span class="gc-tenue">Editor di schede: libreria, trascina e riordina, anteprima di cio' che vede il cliente.</span></a>
+    </nav>
+  </main>
+  <script type="module">
+    import { CONFIG } from './core/config.js';
+    const nomi = { demo: 'Demo nel browser (dati di esempio)', rest: 'Architettura A · server Node + SQLite', supabase: 'Architettura B · Supabase' };
+    document.getElementById('backend').textContent = 'Backend: ' + (nomi[CONFIG.backend] || CONFIG.backend);
+  </script>
+</body>
+</html>

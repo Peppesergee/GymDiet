@@ -1,0 +1,13 @@
+# Configurazione minima per `supabase start` / `supabase deploy`.
+project_id = "gymcoach"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[functions.genera-esercizio]
+verify_jwt = true

@@ -1,0 +1,17 @@
+{
+  "name": "gymcoach-server-a",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GymCoach, architettura A: monolite Node + SQLite",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.1.0"
+  }
+}

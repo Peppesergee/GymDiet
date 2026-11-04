@@ -1,0 +1,261 @@
+// Interfaccia 3 · Builder: editor di schede. Libreria a sinistra, tavolo di
+// lavoro al centro (trascina per aggiungere e riordinare), a destra
+// l'anteprima di come la vedra' il cliente sul telefono.
+import { avvia } from '../core/avvio.js';
+import { h, svuota, avviso, chiediConferma } from '../core/dom.js';
+import { bozzaProgramma, programmaAttivo, catalogo, cerca, trova, GRUPPI, messaggioErrore } from '../core/servizi.js';
+import { apriSchedaTecnica, scegliEsercizio } from '../core/esercizi-ui.js';
+import { creaAnimazione, miniatura } from '../../shared/anim.js';
+import { aggiungiEsercizio, sostituisciEsercizio, rimuoviEsercizio, spostaEsercizio, modificaVoce, schedaVuota } from '../../shared/programmi.js';
+import { GIORNI } from '../../shared/modello.js';
+
+avvia(document.getElementById('app'), async ctx => {
+  const clienti = await ctx.api.elencoClienti();
+  const stato = {
+    cliente: null, programma: null, scheda: null, nome: '', statoProg: 'bozza',
+    giorno: 0, sporco: false, gruppo: null, q: '', anteprimaIdx: 0, vista: 'tavolo'
+  };
+  let animAnteprima = null;
+
+  // ------------------------------------------------------------ struttura
+  const selCliente = h('select', { id: 'bd-cliente', 'aria-label': 'Cliente' }, clienti.map(c => h('option', { value: c.id, testo: c.nome })));
+  const inNome = h('input', { class: 'bd-nome', id: 'bd-nome', 'aria-label': 'Nome del programma', placeholder: 'Nome del programma' });
+  const selStato = h('select', { id: 'bd-stato', 'aria-label': 'Stato' }, [h('option', { value: 'bozza', testo: 'Bozza' }), h('option', { value: 'attivo', testo: 'Attivo (lo vede il cliente)' })]);
+  const indicatore = h('span', { class: 'bd-stato-salva' });
+  const btnSalva = h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: 'Salva' });
+  const colLib = h('section', { class: 'bd-col bd-col-lib', 'aria-label': 'Libreria esercizi' });
+  const colTavolo = h('section', { class: 'bd-col bd-col-tavolo', 'aria-label': 'Programma' });
+  const colAnteprima = h('section', { class: 'bd-col bd-col-anteprima', 'aria-label': 'Anteprima cliente' });
+  const colonne = h('div', { class: 'bd-colonne', 'data-vista': stato.vista }, [colLib, colTavolo, colAnteprima]);
+  const segmenti = h('div', { class: 'bd-segmenti', role: 'group', 'aria-label': 'Vista' });
+
+  ctx.radice.append(h('div', { class: 'bd' }, [
+    h('header', { class: 'bd-barra' }, [
+      h('div', { class: 'bd-marchio', html: 'GymCoach <span>Builder</span>' }),
+      selCliente, inNome, selStato, indicatore,
+      h('button', { class: 'gc-btn', type: 'button', testo: 'Bozza dal profilo', onclick: rigeneraBozza }),
+      h('button', { class: 'gc-btn', type: 'button', testo: 'Da zero', onclick: daZero }),
+      btnSalva
+    ]),
+    segmenti, colonne
+  ]));
+
+  function disegnaSegmenti() {
+    svuota(segmenti, [['libreria', 'Libreria'], ['tavolo', 'Scheda'], ['anteprima', 'Anteprima']].map(([k, t]) =>
+      h('button', { type: 'button', 'aria-pressed': String(stato.vista === k), testo: t, onclick: () => { stato.vista = k; colonne.dataset.vista = k; disegnaSegmenti(); if (k === 'anteprima') disegnaAnteprima(); } })));
+  }
+
+  const segnaSporco = (v = true) => {
+    stato.sporco = v;
+    indicatore.textContent = v ? 'Modifiche non salvate' : (stato.programma ? 'Salvato' : 'Nuovo programma');
+    indicatore.classList.toggle('sporco', v);
+  };
+  const cambia = nuova => { stato.scheda = nuova; segnaSporco(); disegnaTavolo(); disegnaAnteprima(); };
+
+  // ------------------------------------------------------------ dati
+  async function caricaCliente(id) {
+    stato.cliente = await ctx.api.leggiCliente(id);
+    const programmi = await ctx.api.programmi(id);
+    const p = programmaAttivo(programmi) || programmi[0] || null;
+    stato.programma = p;
+    if (p) {
+      stato.scheda = structuredClone(p.scheda); stato.nome = p.nome; stato.statoProg = p.stato === 'archiviato' ? 'bozza' : p.stato;
+    } else {
+      const b = bozzaProgramma(stato.cliente, ctx.personali);
+      stato.scheda = b.scheda; stato.nome = b.nome; stato.statoProg = 'bozza';
+    }
+    stato.giorno = 0; stato.anteprimaIdx = 0;
+    inNome.value = stato.nome; selStato.value = stato.statoProg;
+    segnaSporco(!p);
+    disegnaTavolo(); disegnaAnteprima();
+  }
+
+  async function rigeneraBozza() {
+    if (stato.sporco && !await chiediConferma('Sostituire la scheda sul tavolo con una nuova bozza generata dal profilo del cliente?', { si: 'Genera' })) return;
+    const b = bozzaProgramma(stato.cliente, ctx.personali);
+    stato.nome = b.nome; inNome.value = b.nome; stato.giorno = 0;
+    cambia(b.scheda);
+  }
+  async function daZero() {
+    if (stato.sporco && !await chiediConferma('Svuotare il tavolo e partire da una scheda vuota?', { si: 'Svuota' })) return;
+    stato.giorno = 0;
+    cambia(schedaVuota(stato.cliente.giorniSettimana));
+  }
+
+  btnSalva.onclick = async () => {
+    btnSalva.disabled = true;
+    const dati = { nome: inNome.value.trim() || 'Programma', stato: selStato.value, scheda: stato.scheda };
+    try {
+      stato.programma = stato.programma && stato.programma.stato !== 'archiviato'
+        ? await ctx.api.aggiornaProgramma(stato.programma.id, dati)
+        : await ctx.api.creaProgramma(stato.cliente.id, dati);
+      segnaSporco(false);
+      avviso(dati.stato === 'attivo' ? `Programma attivo per ${stato.cliente.nome}` : 'Bozza salvata');
+    } catch (e) { avviso(messaggioErrore(e), 'errore'); }
+    btnSalva.disabled = false;
+  };
+  inNome.oninput = () => segnaSporco();
+  selStato.onchange = () => segnaSporco();
+  selCliente.onchange = async () => {
+    if (stato.sporco && !await chiediConferma('Ci sono modifiche non salvate. Cambiare cliente comunque?', { si: 'Cambia' })) {
+      selCliente.value = stato.cliente.id; return;
+    }
+    caricaCliente(selCliente.value);
+  };
+
+  // ------------------------------------------------------------ libreria
+  const listaLib = h('div', { class: 'bd-lib' });
+  function disegnaLibreria() {
+    const base = stato.q.length >= 2 ? cerca(stato.q, ctx.personali) : catalogo(ctx.personali);
+    const lista = base.filter(e => !stato.gruppo || e.gruppo === stato.gruppo);
+    svuota(listaLib, lista.map(e => {
+      const voce = h('div', { class: 'bd-lib-voce', draggable: 'true', title: 'Trascina nella scheda' }, [
+        h('span', { html: miniatura(e.anim) }),
+        h('div', { onclick: () => apriSchedaTecnica(e), style: 'cursor:pointer' }, [h('strong', { testo: e.nome }), h('small', { testo: (GRUPPI[e.gruppo]?.nome || '') + (e.personalizzato ? ' · personale' : '') })]),
+        h('button', { class: 'bd-piu', type: 'button', 'aria-label': `Aggiungi ${e.nome}`, testo: '+', onclick: () => aggiungi(e) })
+      ]);
+      voce.addEventListener('dragstart', ev => { ev.dataTransfer.setData('text/gc-esercizio', e.id); ev.dataTransfer.effectAllowed = 'copy'; });
+      return voce;
+    }));
+    if (stato.q.length >= 2) {
+      listaLib.append(h('button', { class: 'gc-btn', type: 'button', style: 'margin-top:8px', testo: `Non c'e'? Crea "${stato.q}" con Claude`, onclick: async () => {
+        const e = await scegliEsercizio(ctx, { titolo: 'Crea con Claude' });
+        if (e) { aggiungi(e); disegnaLibreria(); }
+      } }));
+    }
+  }
+  const chips = h('div', { class: 'gc-chips', style: 'margin-top:8px' }, [[null, 'Tutti'], ...Object.entries(GRUPPI).map(([k, v]) => [k, v.nome])].map(([k, t]) =>
+    h('button', { class: 'gc-chip', type: 'button', 'aria-pressed': String(k === stato.gruppo), testo: t, onclick: ev => {
+      stato.gruppo = k; chips.querySelectorAll('.gc-chip').forEach(b => b.setAttribute('aria-pressed', String(b === ev.currentTarget))); disegnaLibreria();
+    } })));
+  colLib.append(
+    h('h2', { testo: 'Libreria' }),
+    h('input', { class: 'gc-input', id: 'bd-cerca', type: 'search', placeholder: 'Cerca esercizio', oninput: e => { stato.q = e.target.value.trim(); disegnaLibreria(); } }),
+    chips, listaLib
+  );
+
+  function aggiungi(es, posizione) {
+    cambia(aggiungiEsercizio(stato.scheda, stato.giorno, es, stato.cliente.obiettivo, posizione));
+    avviso(`${es.nome} aggiunto a ${stato.scheda.sessioni[stato.giorno].nome}`);
+  }
+
+  // ------------------------------------------------------------ tavolo
+  let trascinoDa = null;
+  function disegnaTavolo() {
+    const sessioni = stato.scheda.sessioni;
+    if (stato.giorno >= sessioni.length) stato.giorno = 0;
+    const s = sessioni[stato.giorno];
+    const traccia = h('div', { class: 'bd-traccia' });
+
+    traccia.addEventListener('dragover', ev => { ev.preventDefault(); traccia.classList.add('sopra'); });
+    traccia.addEventListener('dragleave', ev => { if (!traccia.contains(ev.relatedTarget)) traccia.classList.remove('sopra'); });
+    traccia.addEventListener('drop', ev => {
+      ev.preventDefault(); traccia.classList.remove('sopra');
+      const id = ev.dataTransfer.getData('text/gc-esercizio');
+      const bersaglio = ev.target.closest('.bd-blocco');
+      const pos = bersaglio ? Number(bersaglio.dataset.i) : s.esercizi.length;
+      if (id) { const es = trova(id, ctx.personali); if (es) aggiungi(es, pos); return; }
+      if (trascinoDa !== null) {
+        const a = Math.min(pos, s.esercizi.length - 1);
+        if (a !== trascinoDa) cambia(spostaEsercizio(stato.scheda, stato.giorno, trascinoDa, a));
+        trascinoDa = null;
+      }
+    });
+
+    s.esercizi.forEach((v, i) => {
+      const num = (campo, etic, valore, classe = '') => h('label', {}, [etic, h('input', {
+        class: classe, value: valore, inputmode: campo === 'ripetizioni' ? 'text' : 'numeric', 'aria-label': `${etic} ${v.nome}`,
+        onchange: e => cambia(modificaVoce(stato.scheda, stato.giorno, i, { [campo]: campo === 'ripetizioni' ? e.target.value : Number(e.target.value) || 0 }))
+      })]);
+      const blocco = h('div', { class: 'bd-blocco', dataset: { i } }, [
+        h('span', { class: 'bd-maniglia', 'aria-hidden': 'true', testo: '⋮⋮' }),
+        h('span', { html: miniatura(v.anim) }),
+        h('div', { class: 'bd-blocco-nome' }, [
+          h('strong', { testo: `${i + 1}. ${v.nome}` }),
+          h('input', { value: v.note || '', placeholder: 'Nota per il cliente (es. presa stretta)', 'aria-label': `Nota ${v.nome}`, onchange: e => cambia(modificaVoce(stato.scheda, stato.giorno, i, { note: e.target.value })) })
+        ]),
+        h('div', { class: 'bd-numeri' }, [num('serie', 'serie', v.serie), num('ripetizioni', 'rip', v.ripetizioni, 'rip'), num('recupero', 'rec', v.recupero)]),
+        h('div', { class: 'bd-strumenti' }, [
+          h('button', { type: 'button', testo: 'Come si fa', onclick: () => { const es = trova(v.esercizioId, ctx.personali); es && apriSchedaTecnica(es); } }),
+          h('button', { type: 'button', testo: 'Sostituisci', onclick: async () => {
+            const nuovo = await scegliEsercizio(ctx, { titolo: `Sostituisci ${v.nome}` });
+            if (nuovo) cambia(sostituisciEsercizio(stato.scheda, stato.giorno, i, nuovo));
+          } }),
+          h('button', { type: 'button', testo: '↑', 'aria-label': 'Sposta su', disabled: i === 0, onclick: () => cambia(spostaEsercizio(stato.scheda, stato.giorno, i, i - 1)) }),
+          h('button', { type: 'button', testo: '↓', 'aria-label': 'Sposta giu', disabled: i === s.esercizi.length - 1, onclick: () => cambia(spostaEsercizio(stato.scheda, stato.giorno, i, i + 1)) }),
+          h('button', { type: 'button', testo: 'Rimuovi', onclick: () => cambia(rimuoviEsercizio(stato.scheda, stato.giorno, i)) })
+        ])
+      ]);
+      const maniglia = blocco.querySelector('.bd-maniglia');
+      maniglia.addEventListener('mousedown', () => { blocco.draggable = true; });
+      blocco.addEventListener('dragstart', ev => { trascinoDa = i; blocco.classList.add('trascinato'); ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(i)); });
+      blocco.addEventListener('dragend', () => { blocco.draggable = false; blocco.classList.remove('trascinato'); });
+      blocco.addEventListener('dragenter', () => blocco.classList.add('bersaglio'));
+      blocco.addEventListener('dragleave', ev => { if (!blocco.contains(ev.relatedTarget)) blocco.classList.remove('bersaglio'); });
+      blocco.addEventListener('drop', () => blocco.classList.remove('bersaglio'));
+      traccia.append(blocco);
+    });
+    if (!s.esercizi.length) traccia.append(h('p', { class: 'bd-vuoto', testo: 'Trascina qui gli esercizi dalla libreria, oppure usa il + accanto a ciascuno.' }));
+
+    const totSerie = s.esercizi.reduce((t, v) => t + (Number(v.serie) || 0), 0);
+    const gruppi = [...new Set(s.esercizi.map(v => GRUPPI[v.gruppo]?.nome).filter(Boolean))];
+    svuota(colTavolo,
+      h('h2', { testo: `Scheda di ${stato.cliente.nome}` }),
+      h('div', { class: 'bd-giorni', role: 'tablist' }, [
+        ...sessioni.map((x, i) => h('button', { class: 'bd-giorno', role: 'tab', type: 'button', 'aria-selected': String(i === stato.giorno), onclick: () => { stato.giorno = i; stato.anteprimaIdx = 0; disegnaTavolo(); disegnaAnteprima(); } }, [x.nome, h('small', { testo: GIORNI[x.giornoSuggerito] ?? '' })])),
+        sessioni.length < 7 ? h('button', { class: 'bd-giorno', type: 'button', testo: '+ Giorno', onclick: () => {
+          const nuova = structuredClone(stato.scheda);
+          const usati = new Set(nuova.sessioni.map(x => x.giornoSuggerito));
+          const libero = [0, 1, 2, 3, 4, 5, 6].find(g => !usati.has(g));
+          nuova.sessioni.push({ ...schedaVuota([libero]).sessioni[0], id: 'giorno-' + Date.now().toString(36), nome: 'Giorno ' + String.fromCharCode(65 + nuova.sessioni.length) });
+          stato.giorno = nuova.sessioni.length - 1; cambia(nuova);
+        } }) : null
+      ]),
+      h('div', { class: 'bd-intesta' }, [
+        h('label', { class: 'gc-campo' }, ['Nome della seduta', h('input', { id: 'bd-nome-seduta', value: s.nome, onchange: e => { const n = structuredClone(stato.scheda); n.sessioni[stato.giorno].nome = e.target.value || s.nome; cambia(n); } })]),
+        h('label', { class: 'gc-campo' }, ['Giorno', h('select', { id: 'bd-giorno-sett', onchange: e => { const n = structuredClone(stato.scheda); n.sessioni[stato.giorno].giornoSuggerito = Number(e.target.value); cambia(n); } },
+          GIORNI.map((g, i) => h('option', { value: i, selected: i === s.giornoSuggerito, testo: g })))]),
+        sessioni.length > 1 ? h('button', { class: 'gc-btn', type: 'button', testo: 'Elimina seduta', onclick: async () => {
+          if (!await chiediConferma(`Eliminare la seduta "${s.nome}" dal programma?`, { si: 'Elimina', pericolo: true })) return;
+          const n = structuredClone(stato.scheda); n.sessioni.splice(stato.giorno, 1); stato.giorno = 0; cambia(n);
+        } }) : null
+      ]),
+      traccia,
+      h('div', { class: 'bd-sommario' }, [
+        h('span', {}, [h('b', { testo: s.esercizi.length }), ' esercizi']),
+        h('span', {}, [h('b', { testo: totSerie }), ' serie']),
+        h('span', {}, ['~', h('b', { testo: s.durataStimata }), ' min']),
+        gruppi.length ? h('span', { testo: gruppi.join(', ') }) : null
+      ])
+    );
+  }
+
+  // ------------------------------------------------------------ anteprima
+  function disegnaAnteprima() {
+    if (animAnteprima) { animAnteprima.destroy(); animAnteprima = null; }
+    const s = stato.scheda.sessioni[stato.giorno];
+    const corrente = s.esercizi[stato.anteprimaIdx] || s.esercizi[0];
+    const box = corrente ? h('div', { class: 'anim-box' }) : null;
+    svuota(colAnteprima, h('div', { class: 'bd-anteprima' }, [
+      h('h2', { testo: 'Cosa vede il cliente' }),
+      h('div', { class: 'bd-telefono' }, h('div', { class: 'bd-schermo' }, [
+        h('div', { class: 'bd-schermo-testa' }, [h('small', { testo: `${GIORNI[s.giornoSuggerito] ?? ''} · ~${s.durataStimata} min` }), h('h3', { testo: s.nome })]),
+        box,
+        corrente ? h('p', { class: 'bd-schermo-nota', testo: corrente.note ? `Nota del trainer: ${corrente.note}` : `${corrente.nome}: ${corrente.serie} × ${corrente.ripetizioni}` }) : h('p', { class: 'bd-schermo-nota', testo: 'Nessun esercizio in questa seduta.' }),
+        ...s.esercizi.map((v, i) => h('button', { class: 'bd-schermo-voce' + (v === corrente ? ' attiva' : ''), type: 'button', onclick: () => { stato.anteprimaIdx = i; disegnaAnteprima(); } }, [
+          h('span', { html: miniatura(v.anim) }),
+          h('span', {}, [h('strong', { testo: v.nome }), h('small', { testo: `${v.serie} × ${v.ripetizioni}${v.recupero ? ` · ${v.recupero}s` : ''}` })])
+        ]))
+      ])),
+      h('p', { class: 'bd-didascalia', testo: stato.statoProg === 'attivo' || selStato.value === 'attivo' ? 'Salvato come attivo, il cliente lo trova nella sua app.' : 'In bozza: il cliente non lo vede ancora.' })
+    ]));
+    if (box) animAnteprima = creaAnimazione(box, corrente.anim, { durata: 2800 });
+  }
+
+  // ------------------------------------------------------------ via
+  disegnaSegmenti();
+  disegnaLibreria();
+  if (!clienti.length) { svuota(colTavolo, h('p', { class: 'bd-vuoto', testo: 'Aggiungi un cliente da Studio o Campo per iniziare.' })); return; }
+  await caricaCliente(clienti[0].id);
+  window.addEventListener('beforeunload', ev => { if (stato.sporco) { ev.preventDefault(); ev.returnValue = ''; } });
+});
