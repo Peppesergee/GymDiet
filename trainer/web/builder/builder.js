@@ -7,6 +7,7 @@ import { bozzaProgramma, programmaAttivo, catalogo, cerca, trova, GRUPPI, messag
 import { apriSchedaTecnica, scegliEsercizio, creaEsercizio } from '../core/esercizi-ui.js';
 import { creaAnimazione, miniatura } from '../../shared/anim.js';
 import { aggiungiEsercizio, sostituisciEsercizio, rimuoviEsercizio, spostaEsercizio, modificaVoce, schedaVuota } from '../../shared/programmi.js';
+import { apriNuovaScheda, ordinaSchede, STATI } from '../core/schede-ui.js';
 import { GIORNI } from '../../shared/modello.js';
 
 avvia(document.getElementById('app'), async ctx => {
@@ -19,8 +20,9 @@ avvia(document.getElementById('app'), async ctx => {
 
   // ------------------------------------------------------------ struttura
   const selAtleta = h('select', { id: 'bd-atleta', 'aria-label': 'Atleta' }, atleti.map(c => h('option', { value: c.id, testo: c.nome })));
-  const inNome = h('input', { class: 'bd-nome', id: 'bd-nome', 'aria-label': 'Nome del programma', placeholder: 'Nome del programma' });
-  const selStato = h('select', { id: 'bd-stato', 'aria-label': 'Stato' }, [h('option', { value: 'bozza', testo: 'Bozza' }), h('option', { value: 'attivo', testo: 'Attivo (lo vede l’atleta)' })]);
+  const selScheda = h('select', { id: 'bd-scheda', 'aria-label': 'Scheda da modificare' });
+  const inNome = h('input', { class: 'bd-nome', id: 'bd-nome', 'aria-label': 'Nome della scheda', placeholder: 'Nome della scheda' });
+  const selStato = h('select', { id: 'bd-stato', 'aria-label': 'Stato' }, [h('option', { value: 'bozza', testo: 'Bozza (l’atleta non la vede)' }), h('option', { value: 'attivo', testo: 'Attiva (l’atleta la vede)' }), h('option', { value: 'archiviato', testo: 'Archiviata' })]);
   const indicatore = h('span', { class: 'bd-stato-salva' });
   const btnSalva = h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: 'Salva' });
   const colLib = h('section', { class: 'bd-col bd-col-lib', 'aria-label': 'Libreria esercizi' });
@@ -32,9 +34,9 @@ avvia(document.getElementById('app'), async ctx => {
   ctx.radice.append(h('div', { class: 'bd' }, [
     h('header', { class: 'bd-barra' }, [
       h('div', { class: 'bd-marchio', html: 'GymCoach <span>Builder</span>' }),
-      selAtleta, inNome, selStato, indicatore,
-      h('button', { class: 'gc-btn', type: 'button', testo: 'Bozza dal profilo', onclick: rigeneraBozza }),
-      h('button', { class: 'gc-btn', type: 'button', testo: 'Da zero', onclick: daZero }),
+      selAtleta, selScheda,
+      h('button', { class: 'gc-btn', type: 'button', testo: '+ Nuova scheda', onclick: nuovaScheda }),
+      inNome, selStato, indicatore,
       btnSalva
     ]),
     segmenti, colonne
@@ -47,52 +49,52 @@ avvia(document.getElementById('app'), async ctx => {
 
   const segnaSporco = (v = true) => {
     stato.sporco = v;
-    indicatore.textContent = v ? 'Modifiche non salvate' : (stato.programma ? 'Salvato' : 'Nuovo programma');
+    indicatore.textContent = v ? 'Modifiche non salvate' : (stato.programma ? 'Salvata' : '');
     indicatore.classList.toggle('sporco', v);
   };
   const cambia = nuova => { stato.scheda = nuova; segnaSporco(); disegnaTavolo(); disegnaAnteprima(); };
 
   // ------------------------------------------------------------ dati
-  async function caricaAtleta(id) {
+  async function caricaAtleta(id, programmaId) {
     stato.atleta = await ctx.api.leggiAtleta(id);
-    const programmi = await ctx.api.programmi(id);
-    const p = programmaAttivo(programmi) || programmi[0] || null;
+    stato.programmi = ordinaSchede(await ctx.api.programmi(id));
+    const p = stato.programmi.find(x => x.id === programmaId) || stato.programmi[0] || null;
+    svuota(selScheda, stato.programmi.length
+      ? stato.programmi.map(x => h('option', { value: x.id, selected: x === p, testo: `${STATI[x.stato]} · ${x.nome}` }))
+      : h('option', { value: '', testo: 'Nessuna scheda' }));
+    selScheda.disabled = !p; inNome.disabled = !p; selStato.disabled = !p; btnSalva.disabled = !p;
     stato.programma = p;
-    if (p) {
-      stato.scheda = structuredClone(p.scheda); stato.nome = p.nome; stato.statoProg = p.stato === 'archiviato' ? 'bozza' : p.stato;
-    } else {
-      const b = bozzaProgramma(stato.atleta, ctx.personali);
-      stato.scheda = b.scheda; stato.nome = b.nome; stato.statoProg = 'bozza';
-    }
+    stato.scheda = p ? structuredClone(p.scheda) : null;
+    stato.nome = p ? p.nome : '';
+    stato.statoProg = p ? p.stato : 'bozza';
     stato.giorno = 0; stato.anteprimaIdx = 0;
     inNome.value = stato.nome; selStato.value = stato.statoProg;
-    segnaSporco(!p);
+    segnaSporco(false);
     disegnaTavolo(); disegnaAnteprima();
   }
 
-  async function rigeneraBozza() {
-    if (stato.sporco && !await chiediConferma('Sostituire la scheda sul tavolo con una nuova bozza generata dal profilo dell’atleta?', { si: 'Genera' })) return;
-    const b = bozzaProgramma(stato.atleta, ctx.personali);
-    stato.nome = b.nome; inNome.value = b.nome; stato.giorno = 0;
-    cambia(b.scheda);
-  }
-  async function daZero() {
-    if (stato.sporco && !await chiediConferma('Svuotare il tavolo e partire da una scheda vuota?', { si: 'Svuota' })) return;
-    stato.giorno = 0;
-    cambia(schedaVuota(stato.atleta.giorniSettimana));
+  const conferma = async testo => !stato.sporco || chiediConferma(testo, { si: 'Continua' });
+
+  async function nuovaScheda() {
+    if (!await conferma('Ci sono modifiche non salvate alla scheda aperta. Continuare senza salvarle?')) return;
+    const p = await apriNuovaScheda(ctx, stato.atleta, stato.programmi);
+    if (p) caricaAtleta(stato.atleta.id, p.id);
   }
 
   btnSalva.onclick = async () => {
+    if (!stato.programma) return;
     btnSalva.disabled = true;
-    const dati = { nome: inNome.value.trim() || 'Programma', stato: selStato.value, scheda: stato.scheda };
+    const dati = { nome: inNome.value.trim() || 'Scheda', stato: selStato.value, scheda: stato.scheda };
     try {
-      stato.programma = stato.programma && stato.programma.stato !== 'archiviato'
-        ? await ctx.api.aggiornaProgramma(stato.programma.id, dati)
-        : await ctx.api.creaProgramma(stato.atleta.id, dati);
-      segnaSporco(false);
-      avviso(dati.stato === 'attivo' ? `Programma attivo per ${stato.atleta.nome}` : 'Bozza salvata');
+      const agg = await ctx.api.aggiornaProgramma(stato.programma.id, dati);
+      avviso(dati.stato === 'attivo' ? `Scheda attiva: ${stato.atleta.nome.split(' ')[0]} la vede subito` : dati.stato === 'bozza' ? 'Bozza salvata' : 'Scheda salvata');
+      await caricaAtleta(stato.atleta.id, agg.id);   // l'attivazione puo' aver archiviato un'altra scheda
     } catch (e) { avviso(messaggioErrore(e), 'errore'); }
-    btnSalva.disabled = false;
+    btnSalva.disabled = !stato.programma;
+  };
+  selScheda.onchange = async () => {
+    if (!await conferma('Ci sono modifiche non salvate. Aprire un’altra scheda senza salvarle?')) { selScheda.value = stato.programma.id; return; }
+    caricaAtleta(stato.atleta.id, selScheda.value);
   };
   inNome.oninput = () => segnaSporco();
   selStato.onchange = () => segnaSporco();
@@ -140,6 +142,13 @@ avvia(document.getElementById('app'), async ctx => {
   // ------------------------------------------------------------ tavolo
   let trascinoDa = null;
   function disegnaTavolo() {
+    if (!stato.scheda) {
+      svuota(colTavolo, h('div', { class: 'bd-vuoto' }, [
+        h('p', { testo: `${stato.atleta.nome} non ha ancora nessuna scheda.` }),
+        h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: '+ Crea la prima scheda', onclick: nuovaScheda })
+      ]));
+      return;
+    }
     const sessioni = stato.scheda.sessioni;
     if (stato.giorno >= sessioni.length) stato.giorno = 0;
     const s = sessioni[stato.giorno];
@@ -231,6 +240,7 @@ avvia(document.getElementById('app'), async ctx => {
   // ------------------------------------------------------------ anteprima
   function disegnaAnteprima() {
     if (animAnteprima) { animAnteprima.destroy(); animAnteprima = null; }
+    if (!stato.scheda) { svuota(colAnteprima); return; }
     const s = stato.scheda.sessioni[stato.giorno];
     const corrente = s.esercizi[stato.anteprimaIdx] || s.esercizi[0];
     const box = corrente ? h('div', { class: 'anim-box' }) : null;
@@ -245,7 +255,7 @@ avvia(document.getElementById('app'), async ctx => {
           h('span', {}, [h('strong', { testo: v.nome }), h('small', { testo: `${v.serie} × ${v.ripetizioni}${v.recupero ? ` · ${v.recupero}s` : ''}` })])
         ]))
       ])),
-      h('p', { class: 'bd-didascalia', testo: stato.statoProg === 'attivo' || selStato.value === 'attivo' ? 'Salvato come attivo, l’atleta lo trova nella sua app.' : 'In bozza: l’atleta non lo vede ancora.' })
+      h('p', { class: 'bd-didascalia', testo: { attivo: 'Scheda attiva: l’atleta la vede così nella sua app.', bozza: 'Bozza: l’atleta non la vede finché non la attivi e salvi.', archiviato: 'Archiviata: l’atleta non la vede.' }[stato.statoProg] })
     ]));
     if (box) animAnteprima = creaAnimazione(box, corrente.anim, { durata: 2800 });
   }
@@ -254,6 +264,10 @@ avvia(document.getElementById('app'), async ctx => {
   disegnaSegmenti();
   disegnaLibreria();
   if (!atleti.length) { svuota(colTavolo, h('p', { class: 'bd-vuoto', testo: 'Aggiungi un atleta da Studio o Campo per iniziare.' })); return; }
-  await caricaAtleta(atleti[0].id);
+  // da Studio si arriva con #atleta-<id>
+  const daHash = location.hash.startsWith('#atleta-') ? location.hash.slice(8) : null;
+  const iniziale = atleti.find(a => a.id === daHash) || atleti[0];
+  selAtleta.value = iniziale.id;
+  await caricaAtleta(iniziale.id);
   window.addEventListener('beforeunload', ev => { if (stato.sporco) { ev.preventDefault(); ev.returnValue = ''; } });
 });

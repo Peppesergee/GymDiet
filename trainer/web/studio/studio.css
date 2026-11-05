@@ -139,3 +139,32 @@
   .st-tabella td.col-stato { grid-row: 1; grid-column: 2; }
 }
 .st-azioni-atleta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* schede dell'atleta */
+.st-schede-testa { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.st-schede-testa h2 { font-size: 1.2rem; }
+.st-elenco-schede { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 18px; }
+.st-scheda-voce { flex: 0 0 auto; min-width: 180px; max-width: 260px; display: grid; gap: 3px; text-align: left; padding: 10px 12px; border: 1px solid var(--gc-bordo); border-radius: var(--gc-raggio); background: var(--gc-superficie); cursor: pointer; }
+.st-scheda-voce strong { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-scheda-voce small { color: var(--gc-testo-2); font-size: .78rem; }
+.st-scheda-voce[aria-pressed="true"] { border-color: var(--gc-accento); box-shadow: inset 0 0 0 1px var(--gc-accento); }
+.st-scheda-nuova { border-style: dashed; color: var(--gc-accento); align-content: center; }
+.st-stato { justify-self: start; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+.st-stato-attivo { color: var(--gc-ok); background: color-mix(in srgb, var(--gc-ok) 14%, transparent); }
+.st-stato-bozza { color: var(--gc-attenzione); background: color-mix(in srgb, var(--gc-attenzione) 15%, transparent); }
+.st-stato-archiviato { color: var(--gc-testo-2); background: color-mix(in srgb, var(--gc-testo-2) 12%, transparent); }
+.st-titolo-scheda { display: grid; gap: 4px; min-width: 0; flex: 1 1 300px; }
+.st-nome-scheda { font: 700 1.25rem var(--gc-font-titoli); font-stretch: 90%; border: 1px solid transparent; border-radius: 6px; padding: 2px 6px; margin-left: -6px; background: none; min-width: 0; width: min(100%, 420px); }
+.st-nome-scheda:hover, .st-nome-scheda:focus { border-color: var(--gc-bordo); background: var(--gc-superficie); }
+.st-seduta .st-seduta-testa { align-items: center; gap: 8px; }
+.st-nome-giorno { flex: 1; min-width: 0; font: 700 1.02rem var(--gc-font-titoli); font-stretch: 90%; border: 1px solid transparent; border-radius: 6px; padding: 3px 6px; margin-left: -6px; background: none; }
+.st-nome-giorno:hover, .st-nome-giorno:focus { border-color: var(--gc-bordo); }
+.st-giorno-sett { border: 1px solid var(--gc-bordo); border-radius: 6px; background: var(--gc-campo-sfondo); padding: 3px 4px; font-size: .84rem; }
+.st-durata { font-size: .78rem; color: var(--gc-testo-2); white-space: nowrap; }
+.st-togli-giorno { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--gc-bordo); background: none; color: var(--gc-testo-2); cursor: pointer; font-size: 1rem; line-height: 1; flex: 0 0 28px; }
+.st-togli-giorno:hover { color: var(--gc-pericolo); border-color: var(--gc-pericolo); }
+.st-giorno-vuoto { margin: 0; padding: 14px; color: var(--gc-testo-2); font-size: .88rem; }
+.st-nota { grid-column: 2 / -1; border: 0; border-bottom: 1px dashed var(--gc-bordo); background: none; font-size: .82rem; color: var(--gc-testo-2); padding: 3px 0; min-width: 0; }
+.st-aggiungi-giorno { display: grid; gap: 4px; place-content: center; text-align: center; min-height: 120px; border: 1px dashed var(--gc-bordo); border-radius: var(--gc-raggio); background: none; color: var(--gc-accento); cursor: pointer; }
+.st-aggiungi-giorno small { color: var(--gc-testo-2); }
+.st-aggiungi-giorno:hover { border-color: var(--gc-accento); }

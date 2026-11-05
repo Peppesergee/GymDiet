@@ -435,3 +435,38 @@ export function schedaVuota(giorni = [0, 2, 4]) {
     nota: '', progressione: [], generataIl: new Date().toISOString()
   };
 }
+
+// ---------------------------------------------------------------- giorni
+/** Aggiunge un giorno vuoto, sul primo giorno della settimana libero. */
+export function aggiungiGiorno(scheda) {
+  const s = structuredClone(scheda);
+  if (s.sessioni.length >= 7) return s;
+  const usati = new Set(s.sessioni.map(x => x.giornoSuggerito));
+  const libero = [0, 1, 2, 3, 4, 5, 6].find(g => !usati.has(g)) ?? 0;
+  s.sessioni.push({
+    ...schedaVuota([libero]).sessioni[0],
+    id: 'giorno-' + Date.now().toString(36) + s.sessioni.length,
+    nome: 'Giorno ' + String.fromCharCode(65 + s.sessioni.length)
+  });
+  s.giorniSettimana = s.sessioni.length;
+  return s;
+}
+
+export function rimuoviGiorno(scheda, iSessione) {
+  const s = structuredClone(scheda);
+  s.sessioni.splice(iSessione, 1);
+  s.giorniSettimana = s.sessioni.length;
+  return s;
+}
+
+/** campi: { nome, giornoSuggerito } */
+export function modificaGiorno(scheda, iSessione, campi) {
+  const s = structuredClone(scheda);
+  Object.assign(s.sessioni[iSessione], campi);
+  return s;
+}
+
+/** Copia di una scheda come punto di partenza per la successiva. */
+export function copiaScheda(scheda) {
+  return { ...structuredClone(scheda), generataIl: new Date().toISOString() };
+}

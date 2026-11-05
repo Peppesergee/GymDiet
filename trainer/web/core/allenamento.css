@@ -15,13 +15,16 @@
 .al-esercizio h2 { margin: 0; color: var(--gc-testo); font-size: 1.6rem; text-transform: none; letter-spacing: 0; line-height: 1.05; }
 .al-esercizio p { margin: 4px 0 0; color: var(--gc-testo-2); }
 .al-consiglio { border-left: 3px solid var(--gc-accento); padding: 6px 0 6px 12px; color: var(--gc-testo); font-weight: 500; }
-.al-serie { display: grid; grid-template-columns: 28px 1fr 1fr 56px; gap: 8px; align-items: center; }
+.al-serie { display: grid; grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr) 50px; gap: 6px; align-items: center; }
 .al-serie .n { font: 800 1.3rem var(--gc-font-titoli); color: var(--gc-testo-2); text-align: center; }
-.al-stepper { display: grid; grid-template-columns: 38px minmax(0, 1fr) 38px; align-items: center; background: var(--gc-superficie); border: 1px solid var(--gc-bordo); border-radius: 12px; height: 56px; overflow: hidden; }
+.al-stepper { display: grid; grid-template-columns: 32px minmax(0, 1fr) 32px; align-items: center; background: var(--gc-superficie); border: 1px solid var(--gc-bordo); border-radius: 12px; height: 56px; overflow: hidden; }
 .al-stepper button { height: 100%; border: 0; background: none; font-size: 1.4rem; color: var(--gc-testo-2); cursor: pointer; }
-.al-stepper output { text-align: center; font: 800 1.55rem/1 var(--gc-font-titoli); }
-.al-stepper output small { display: block; font: 600 .66rem var(--gc-font); color: var(--gc-testo-2); letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
-.al-fatto { height: 56px; border-radius: 12px; border: 2px solid var(--gc-bordo); background: none; font-size: 1.5rem; color: var(--gc-testo-2); cursor: pointer; }
+.al-stepper:focus-within { border-color: var(--gc-accento); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gc-accento) 30%, transparent); }
+.al-campo { display: grid; justify-items: center; align-content: center; height: 100%; cursor: text; min-width: 0; }
+.al-valore { width: 100%; min-width: 0; border: 0; background: none; color: var(--gc-testo); text-align: center; padding: 0; font: 800 1.35rem/1.1 var(--gc-font-titoli); letter-spacing: -.02em; -webkit-appearance: none; appearance: none; }
+.al-valore:focus { outline: none; }
+.al-campo small { display: block; font: 600 .66rem var(--gc-font); color: var(--gc-testo-2); letter-spacing: .08em; text-transform: uppercase; margin-top: 1px; pointer-events: none; }
+.al-fatto { height: 56px; width: 100%; border-radius: 12px; border: 2px solid var(--gc-bordo); background: none; font-size: 1.5rem; color: var(--gc-testo-2); cursor: pointer; }
 .al-fatto[aria-pressed="true"] { background: var(--gc-ok); border-color: var(--gc-ok); color: #0b1f12; }
 .al-naviga { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
 
@@ -30,4 +33,5 @@
 .al-timer span { flex: 1; font-weight: 600; }
 .al-timer button { background: rgb(0 0 0 / .14); color: inherit; border: 0; border-radius: 10px; min-height: 44px; padding: 0 14px; font-weight: 700; cursor: pointer; }
 .al-timer i { position: absolute; left: 0; top: 0; height: 4px; background: rgb(0 0 0 / .3); }
-@media (max-width: 380px) { .al-esercizio { grid-template-columns: 96px minmax(0, 1fr); } .al-serie { grid-template-columns: 22px 1fr 1fr 48px; gap: 6px; } }
+@media (max-width: 380px) { .al-esercizio { grid-template-columns: 96px minmax(0, 1fr); } .al-serie { grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) 44px; gap: 5px; } .al-valore { font-size: 1.2rem; } }
+@media (max-width: 350px) { .al-stepper { grid-template-columns: 24px minmax(0, 1fr) 24px; } .al-stepper button { font-size: 1.15rem; } .al-valore { font-size: 1.08rem; letter-spacing: -.03em; } .al-serie { grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) 40px; gap: 4px; } }

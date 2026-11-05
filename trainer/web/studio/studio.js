@@ -6,7 +6,8 @@ import { formAtleta } from '../core/form-atleta.js';
 import { apriSchedaTecnica, scegliEsercizio, creaEsercizio } from '../core/esercizi-ui.js';
 import { apriInvito, statoApp } from '../core/invito-ui.js';
 import { miniatura } from '../../shared/anim.js';
-import { aggiungiEsercizio, sostituisciEsercizio, rimuoviEsercizio, spostaEsercizio, modificaVoce, candidatiPer } from '../../shared/programmi.js';
+import { aggiungiEsercizio, sostituisciEsercizio, rimuoviEsercizio, spostaEsercizio, modificaVoce, candidatiPer, aggiungiGiorno, rimuoviGiorno, modificaGiorno } from '../../shared/programmi.js';
+import { apriNuovaScheda, ordinaSchede, STATI } from '../core/schede-ui.js';
 import { andamento, giorniDa, ultimoCarico, isoData } from '../../shared/progressi.js';
 import { GIORNI, ESPERIENZE } from '../../shared/modello.js';
 
@@ -106,12 +107,12 @@ avvia(document.getElementById('app'), async ctx => {
     const stato = statoAtleta(atleta);
     const app = statoApp(atleta);
     const contenuto = h('div');
-    const schede = [['programma', 'Scheda'], ['storico', `Storico (${sedute.length})`], ['profilo', 'Profilo']];
+    const schede = [['programma', `Schede (${programmi.length})`], ['storico', `Storico (${sedute.length})`], ['profilo', 'Profilo']];
     const barra = h('div', { class: 'st-schede', role: 'tablist' });
     const mostra = sch => {
       schedaAperta = sch;
       svuota(barra, schede.map(([k, t]) => h('button', { role: 'tab', type: 'button', 'aria-selected': String(k === sch), testo: t, onclick: () => mostra(k) })));
-      if (sch === 'programma') svuota(contenuto, pannelloProgramma(atleta, programmi, sedute));
+      if (sch === 'programma') svuota(contenuto, pannelloSchede(atleta, programmi, sedute));
       else if (sch === 'storico') svuota(contenuto, pannelloStorico(atleta, programmi, sedute));
       else svuota(contenuto, pannelloProfilo(atleta));
     };
@@ -133,93 +134,173 @@ avvia(document.getElementById('app'), async ctx => {
     mostra(schedaAperta);
   }
 
-  function pannelloProgramma(atleta, programmi, sedute) {
-    const attivo = programmaAttivo(programmi);
-    if (!attivo) {
+  // scheda aperta nell'editor, per atleta (resta selezionata tra un salvataggio e l'altro)
+  const selezione = {};
+
+  function pannelloSchede(atleta, programmi, sedute) {
+    const ordinate = ordinaSchede(programmi);
+    let modificato = false;
+    const nuova = async () => {
+      if (modificato && !await chiediConferma('Ci sono modifiche non salvate alla scheda aperta. Continuare senza salvarle?', { si: 'Continua' })) return;
+      const p = await apriNuovaScheda(ctx, atleta, programmi);
+      if (p) { modificato = false; selezione[atleta.id] = p.id; instrada(); }
+    };
+    if (!ordinate.length) {
       return h('div', { class: 'st-vuoto' }, [
-        h('h2', { testo: 'Nessuna scheda attiva' }),
-        h('p', { class: 'gc-tenue', testo: 'Parti da una bozza costruita sul profilo dell’atleta: la puoi modificare esercizio per esercizio.' }),
-        h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: 'Genera bozza dal profilo', onclick: async () => {
-          await ctx.api.creaProgramma(atleta.id, bozzaProgramma(atleta, ctx.personali));
-          avviso('Scheda creata'); instrada();
-        } })
+        h('h2', { testo: 'Ancora nessuna scheda' }),
+        h('p', { class: 'gc-tenue', testo: 'Crea la prima scheda: parti da una proposta basata sul profilo dell’atleta oppure da una scheda vuota.' }),
+        h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: '+ Crea la prima scheda', onclick: nuova })
       ]);
     }
-    let scheda = structuredClone(attivo.scheda);
-    let modificato = false;
-    const zona = h('div');
+
+    const corrente = ordinate.find(p => p.id === selezione[atleta.id]) || ordinate[0];
+    selezione[atleta.id] = corrente.id;
+    let scheda = structuredClone(corrente.scheda);
+    let nomeScheda = corrente.nome;
+
+    const salva = async (stato = corrente.stato) => {
+      const agg = await ctx.api.aggiornaProgramma(corrente.id, { nome: nomeScheda.trim() || 'Scheda', stato, scheda });
+      Object.assign(corrente, agg);
+      modificato = false;
+      return agg;
+    };
+    const apri = async p => {
+      if (p.id === corrente.id) return;
+      if (modificato && !await chiediConferma('Ci sono modifiche non salvate. Aprire un’altra scheda senza salvarle?', { si: 'Apri' })) return;
+      modificato = false; selezione[atleta.id] = p.id; instrada();
+    };
+
+    // ---- elenco delle schede dell'atleta
+    const elenco = h('div', { class: 'st-elenco-schede' }, [
+      ...ordinate.map(p => h('button', { class: 'st-scheda-voce', type: 'button', 'aria-pressed': String(p.id === corrente.id), onclick: () => apri(p) }, [
+        h('span', { class: `st-stato st-stato-${p.stato}`, testo: STATI[p.stato] }),
+        h('strong', { testo: p.nome }),
+        h('small', { testo: `${p.scheda.sessioni.length} giorni · ${dataBreve(p.creatoIl)}` })
+      ])),
+      h('button', { class: 'st-scheda-voce st-scheda-nuova', type: 'button', onclick: nuova }, [h('strong', { testo: '+ Nuova scheda' }), h('small', { testo: 'dal profilo, copia o vuota' })])
+    ]);
+
+    // ---- barra di salvataggio
+    const testoSalva = h('span');
+    const btnSalva = h('button', { class: 'gc-btn gc-btn-primario gc-btn-piccolo', type: 'button', testo: 'Salva', onclick: async e => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        await salva();
+        segna(false);
+        avviso(corrente.stato === 'attivo' ? 'Scheda salvata: l’atleta la vede subito' : 'Bozza salvata');
+      } catch (x) { avviso(messaggioErrore(x), 'errore'); }
+      btn.disabled = false;
+    } });
     const barraSalva = h('div', { class: 'st-salva', hidden: true }, [
-      h('span', { testo: 'Modifiche non salvate alla scheda' }),
+      testoSalva,
       h('div', { class: 'gc-azioni', style: 'margin:0' }, [
-        h('button', { class: 'gc-btn gc-btn-piccolo', type: 'button', testo: 'Annulla', onclick: () => { scheda = structuredClone(attivo.scheda); segna(false); } }),
-        h('button', { class: 'gc-btn gc-btn-primario gc-btn-piccolo', type: 'button', testo: 'Salva scheda', onclick: async e => {
-          const btn = e.currentTarget;
-          btn.disabled = true;
-          try {
-            const agg = await ctx.api.aggiornaProgramma(attivo.id, { nome: attivo.nome, stato: 'attivo', scheda });
-            attivo.scheda = agg.scheda; segna(false); avviso('Scheda salvata: l\u2019atleta la vede subito');
-          } catch (x) { avviso(messaggioErrore(x), 'errore'); }
-          btn.disabled = false;
-        } })
+        h('button', { class: 'gc-btn gc-btn-piccolo', type: 'button', testo: 'Annulla', onclick: () => { scheda = structuredClone(corrente.scheda); nomeScheda = corrente.nome; inNome.value = nomeScheda; segna(false); } }),
+        btnSalva
       ])
     ]);
-    const segna = (v = true) => { modificato = v; barraSalva.hidden = !modificato; disegna(); };
+    const segna = (v = true) => {
+      modificato = v;
+      barraSalva.hidden = !v;
+      testoSalva.textContent = corrente.stato === 'attivo' ? 'Modifiche non salvate · l’atleta vede ancora la versione precedente' : 'Modifiche non salvate alla bozza';
+      disegna();
+    };
     const cambia = nuova => { scheda = nuova; segna(true); };
 
+    // ---- intestazione della scheda aperta
+    const inNome = h('input', { class: 'st-nome-scheda', id: 'st-nome-scheda', value: nomeScheda, 'aria-label': 'Nome della scheda', oninput: e => { nomeScheda = e.target.value; if (!modificato) segna(true); } });
+    const spiegazione = {
+      attivo: 'Attiva: l’atleta la vede nella sua app.',
+      bozza: 'Bozza: l’atleta non la vede finche’ non la attivi.',
+      archiviato: 'Archiviata: e’ una scheda passata, puoi riattivarla.'
+    }[corrente.stato];
+    const attiva = async () => {
+      const altra = ordinate.find(p => p.stato === 'attivo' && p.id !== corrente.id);
+      if (!await chiediConferma(altra ? `Attivare "${nomeScheda}"? Sostituisce "${altra.nome}", che resta nello storico.` : `Attivare "${nomeScheda}"? L’atleta la vedra’ subito.`, { si: 'Attiva' })) return;
+      try { await salva('attivo'); avviso('Scheda attiva: l’atleta la vede subito'); instrada(); } catch (x) { avviso(messaggioErrore(x), 'errore'); }
+    };
+    const azioni = [
+      corrente.stato !== 'attivo' ? h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: corrente.stato === 'bozza' ? 'Attiva scheda' : 'Riattiva', onclick: attiva }) : null,
+      corrente.stato === 'attivo' ? h('button', { class: 'gc-btn', type: 'button', testo: 'Registra seduta', onclick: () => registraSeduta(atleta, corrente, sedute) }) : null,
+      h('a', { class: 'gc-btn', href: `../builder/index.html#atleta-${atleta.id}`, testo: 'Apri nel Builder' }),
+      corrente.stato !== 'attivo' ? h('button', { class: 'gc-btn', type: 'button', style: 'color:var(--gc-pericolo)', testo: 'Elimina', onclick: async () => {
+        if (!await chiediConferma(`Eliminare la scheda "${corrente.nome}"? Le sedute gia’ registrate restano nello storico.`, { si: 'Elimina', pericolo: true })) return;
+        await ctx.api.eliminaProgramma(corrente.id); delete selezione[atleta.id]; modificato = false; avviso('Scheda eliminata'); instrada();
+      } }) : null
+    ];
+
+    // ---- giorni ed esercizi
+    const zona = h('div');
     function disegna() {
-      svuota(zona, h('div', { class: 'st-sedute' }, scheda.sessioni.map((s, is) => h('article', { class: 'st-seduta' }, [
-        h('header', {}, [h('h3', { testo: s.nome }), h('span', { testo: `${GIORNI[s.giornoSuggerito] ?? ''} · ~${s.durataStimata} min` })]),
-        ...s.esercizi.map((v, ie) => {
-          const es = trova(v.esercizioId, ctx.personali);
-          const num = (campo, valore, classe = '') => h('input', {
-            class: classe, value: valore, 'aria-label': campo, inputmode: campo === 'rip' ? 'text' : 'numeric',
-            onchange: e => cambia(modificaVoce(scheda, is, ie, { [campo === 'rip' ? 'ripetizioni' : campo]: campo === 'rip' ? e.target.value : Number(e.target.value) || 0 }))
-          });
-          return h('div', { class: 'st-voce' }, [
-            h('span', { class: 'n', testo: ie + 1 }),
-            h('button', { class: 'st-voce-nome', type: 'button', title: 'Come si fa', onclick: () => es && apriSchedaTecnica(es) }, [
-              h('span', { html: miniatura(v.anim) }),
-              h('span', { style: 'min-width:0' }, [h('strong', { testo: v.nome }), h('small', { testo: GRUPPI[v.gruppo]?.nome || '' })])
-            ]),
-            h('div', { class: 'st-param' }, [
-              h('label', {}, ['serie', num('serie', v.serie)]),
-              h('label', {}, ['rip', num('rip', v.ripetizioni, 'rip')]),
-              h('label', {}, ['rec s', num('recupero', v.recupero)])
-            ]),
-            h('div', { class: 'st-strumenti' }, [
-              h('button', { type: 'button', testo: 'Sostituisci', onclick: async () => {
-                const sugg = candidatiPer(v.pattern, { ...atleta, esclusi: [v.esercizioId] });
-                const nuovo = await scegliEsercizio(ctx, { titolo: `Sostituisci ${v.nome}`, suggeriti: sugg });
-                if (nuovo) cambia(sostituisciEsercizio(scheda, is, ie, nuovo));
-              } }),
-              h('button', { type: 'button', testo: '↑', 'aria-label': 'Sposta su', disabled: ie === 0, onclick: () => cambia(spostaEsercizio(scheda, is, ie, ie - 1)) }),
-              h('button', { type: 'button', testo: '↓', 'aria-label': 'Sposta giu', disabled: ie === s.esercizi.length - 1, onclick: () => cambia(spostaEsercizio(scheda, is, ie, ie + 1)) }),
-              h('button', { type: 'button', testo: 'Rimuovi', onclick: () => cambia(rimuoviEsercizio(scheda, is, ie)) })
-            ])
-          ]);
-        }),
-        h('div', { class: 'st-aggiungi' }, h('button', { class: 'gc-btn gc-btn-piccolo', type: 'button', testo: '+ Aggiungi esercizio', onclick: async () => {
-          const nuovo = await scegliEsercizio(ctx, { titolo: `Aggiungi a ${s.nome}` });
-          if (nuovo) cambia(aggiungiEsercizio(scheda, is, nuovo, atleta.obiettivo));
-        } }))
-      ]))));
+      svuota(zona, h('div', { class: 'st-sedute' }, [
+        ...scheda.sessioni.map((s, is) => h('article', { class: 'st-seduta' }, [
+          h('header', { class: 'st-seduta-testa' }, [
+            h('input', { class: 'st-nome-giorno', value: s.nome, 'aria-label': 'Nome del giorno', onchange: e => cambia(modificaGiorno(scheda, is, { nome: e.target.value.trim() || s.nome })) }),
+            h('select', { class: 'st-giorno-sett', 'aria-label': `Giorno della settimana di ${s.nome}`, onchange: e => cambia(modificaGiorno(scheda, is, { giornoSuggerito: Number(e.target.value) })) },
+              GIORNI.map((g, i) => h('option', { value: i, selected: i === s.giornoSuggerito, testo: g }))),
+            h('span', { class: 'st-durata', testo: `~${s.durataStimata} min` }),
+            scheda.sessioni.length > 1 ? h('button', { class: 'st-togli-giorno', type: 'button', title: 'Togli questo giorno', 'aria-label': `Togli ${s.nome}`, testo: '×', onclick: async () => {
+              if (s.esercizi.length && !await chiediConferma(`Togliere "${s.nome}" e i suoi ${s.esercizi.length} esercizi dalla scheda?`, { si: 'Togli', pericolo: true })) return;
+              cambia(rimuoviGiorno(scheda, is));
+            } }) : null
+          ]),
+          s.esercizi.length ? null : h('p', { class: 'st-giorno-vuoto', testo: 'Nessun esercizio: aggiungine uno qui sotto.' }),
+          ...s.esercizi.map((v, ie) => {
+            const es = trova(v.esercizioId, ctx.personali);
+            const num = (campo, valore, classe = '') => h('input', {
+              class: classe, value: valore, 'aria-label': campo, inputmode: campo === 'rip' ? 'text' : 'numeric',
+              onchange: e => cambia(modificaVoce(scheda, is, ie, { [campo === 'rip' ? 'ripetizioni' : campo]: campo === 'rip' ? e.target.value : Number(e.target.value) || 0 }))
+            });
+            return h('div', { class: 'st-voce' }, [
+              h('span', { class: 'n', testo: ie + 1 }),
+              h('button', { class: 'st-voce-nome', type: 'button', title: 'Come si fa', onclick: () => es && apriSchedaTecnica(es) }, [
+                h('span', { html: miniatura(v.anim) }),
+                h('span', { style: 'min-width:0' }, [h('strong', { testo: v.nome }), h('small', { testo: GRUPPI[v.gruppo]?.nome || '' })])
+              ]),
+              h('div', { class: 'st-param' }, [
+                h('label', {}, ['serie', num('serie', v.serie)]),
+                h('label', {}, ['rip', num('rip', v.ripetizioni, 'rip')]),
+                h('label', {}, ['rec s', num('recupero', v.recupero)])
+              ]),
+              h('input', { class: 'st-nota', value: v.note || '', placeholder: 'Nota per l’atleta (facoltativa)', 'aria-label': `Nota per l’atleta su ${v.nome}`, onchange: e => cambia(modificaVoce(scheda, is, ie, { note: e.target.value })) }),
+              h('div', { class: 'st-strumenti' }, [
+                h('button', { type: 'button', testo: 'Sostituisci', onclick: async () => {
+                  const sugg = candidatiPer(v.pattern, { ...atleta, esclusi: [v.esercizioId] });
+                  const nuovo = await scegliEsercizio(ctx, { titolo: `Sostituisci ${v.nome}`, suggeriti: sugg });
+                  if (nuovo) cambia(sostituisciEsercizio(scheda, is, ie, nuovo));
+                } }),
+                h('button', { type: 'button', testo: '↑', 'aria-label': 'Sposta su', disabled: ie === 0, onclick: () => cambia(spostaEsercizio(scheda, is, ie, ie - 1)) }),
+                h('button', { type: 'button', testo: '↓', 'aria-label': 'Sposta giu', disabled: ie === s.esercizi.length - 1, onclick: () => cambia(spostaEsercizio(scheda, is, ie, ie + 1)) }),
+                h('button', { type: 'button', testo: 'Rimuovi', onclick: () => cambia(rimuoviEsercizio(scheda, is, ie)) })
+              ])
+            ]);
+          }),
+          h('div', { class: 'st-aggiungi' }, h('button', { class: 'gc-btn gc-btn-piccolo', type: 'button', testo: '+ Aggiungi esercizio', onclick: async () => {
+            const nuovo = await scegliEsercizio(ctx, { titolo: `Aggiungi a ${s.nome}` });
+            if (nuovo) cambia(aggiungiEsercizio(scheda, is, nuovo, atleta.obiettivo));
+          } }))
+        ])),
+        scheda.sessioni.length < 7 ? h('button', { class: 'st-aggiungi-giorno', type: 'button', onclick: () => cambia(aggiungiGiorno(scheda)) }, [h('strong', { testo: '+ Aggiungi giorno' }), h('small', { testo: 'un altro giorno di allenamento nella settimana' })]) : null
+      ]));
     }
     disegna();
 
-    const archiviati = programmi.filter(p => p.id !== attivo.id);
     return h('div', {}, [
-      h('div', { class: 'st-testa', style: 'margin-bottom:14px' }, [
-        h('div', {}, [h('h2', { testo: attivo.nome, style: 'font-size:1.25rem' }), h('p', { class: 'gc-tenue', testo: `Attivo dal ${dataBreve(attivo.creatoIl)} · ${scheda.sessioni.length} sedute a settimana${archiviati.length ? ` · ${archiviati.length} programmi precedenti` : ''}` })]),
-        h('div', { class: 'gc-azioni', style: 'margin:0' }, [
-          h('button', { class: 'gc-btn', type: 'button', testo: 'Registra seduta', onclick: () => registraSeduta(atleta, attivo, sedute) }),
-          h('button', { class: 'gc-btn', type: 'button', testo: 'Nuovo blocco', onclick: async () => {
-            if (!await chiediConferma('Generare una nuova scheda dal profilo? Quella attuale resta nello storico come archiviata.', { si: 'Genera' })) return;
-            await ctx.api.creaProgramma(atleta.id, bozzaProgramma(atleta, ctx.personali));
-            avviso('Nuova scheda attiva'); instrada();
-          } })
-        ])
+      h('div', { class: 'st-schede-testa' }, [
+        h('h2', { testo: `Schede di ${atleta.nome.split(' ')[0]}` }),
+        h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: '+ Nuova scheda', onclick: nuova })
       ]),
-      zona, barraSalva
+      elenco,
+      h('div', { class: 'st-scheda-aperta' }, [
+        h('div', { class: 'st-testa', style: 'margin-bottom:14px' }, [
+          h('div', { class: 'st-titolo-scheda' }, [
+            h('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, [inNome, h('span', { class: `st-stato st-stato-${corrente.stato}`, testo: STATI[corrente.stato] })]),
+            h('p', { class: 'gc-tenue', testo: `${spiegazione} ${scheda.sessioni.length} giorni a settimana.` })
+          ]),
+          h('div', { class: 'gc-azioni', style: 'margin:0' }, azioni)
+        ]),
+        zona, barraSalva
+      ])
     ]);
   }
 

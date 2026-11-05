@@ -30,6 +30,25 @@ trainer/
   supabase-b/    architettura B: Supabase (Postgres + Auth + RLS)
 ```
 
+## Come il trainer crea una scheda
+
+Dalla pagina dell'atleta (Studio, sezione **Schede**) c'e' l'elenco di tutte
+le sue schede (attiva, bozze, archiviate) e il pulsante **+ Nuova scheda**:
+
+1. **Da dove parti**: proposta dal profilo (esercizi, serie e recuperi scelti
+   in base a obiettivo, esperienza e giorni), copia della scheda attiva,
+   oppure scheda vuota con i soli giorni.
+2. **Quando la vede l'atleta**: come bozza (la prepari con calma) oppure
+   attiva subito (sostituisce quella attuale, che resta nello storico).
+3. La scheda si apre nell'editor: nome, giorni (aggiungi, rinomina, sposta
+   sulla settimana, togli), esercizi (aggiungi, sostituisci, riordina, serie,
+   ripetizioni, recupero, nota per l'atleta). **Salva**; per una bozza,
+   **Attiva scheda** quando e' pronta.
+
+Lo stesso pannello "+ Nuova scheda" c'e' in Campo e nel Builder; dal Builder
+si puo' scegliere quale scheda modificare e una nuova scheda non sovrascrive
+mai quella aperta.
+
 ## Come entra l'atleta
 
 1. Il trainer apre l'atleta e preme **Invita all'app**: riceve un codice di 8
@@ -125,10 +144,10 @@ progetto (la anon key è pubblica per design).
 
 | | Per chi / quando | Punti di forza |
 |---|---|---|
-| **Studio** (trainer) | alla scrivania | atleti con stato (in regola / da sentire / senza scheda) e stato dell'app, scheda modificabile, inviti, storico con grafici e sedute dell'atleta evidenziate |
-| **Campo** (trainer) | in sala con il telefono | agenda del giorno, un esercizio alla volta, carichi con +/−, timer di recupero |
+| **Studio** (trainer) | alla scrivania | atleti con stato (in regola / da sentire / senza scheda) e stato dell'app, tutte le schede dell'atleta con "+ Nuova scheda", bozze e attivazione, giorni ed esercizi modificabili, inviti, storico con grafici e sedute dell'atleta evidenziate |
+| **Campo** (trainer) | in sala con il telefono | agenda del giorno, un esercizio alla volta, carichi digitati o con +/−, timer di recupero |
 | **Builder** (trainer) | costruzione delle schede | libreria, trascina e riordina, note per l'atleta, anteprima di ciò che vede l'atleta |
-| **App atleta** | l'atleta, dal suo telefono | settimana con allenamenti fatti, seduta di oggi, scheda con "come si fa", allenamento guidato, progressi e costanza |
+| **App atleta** | l'atleta, dal suo telefono | settimana con allenamenti fatti, seduta di oggi, scheda con "come si fa", allenamento guidato con kg e ripetizioni da tastiera (o +/−), progressi e costanza |
 
 ## Prima della produzione
 

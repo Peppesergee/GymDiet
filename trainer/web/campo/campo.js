@@ -6,6 +6,7 @@ import { agendaDiOggi, statoAtleta, programmaAttivo, bozzaProgramma, catalogo, c
 import { formAtleta } from '../core/form-atleta.js';
 import { apriSchedaTecnica, rigaEsercizio } from '../core/esercizi-ui.js';
 import { apriAllenamento } from '../core/allenamento-ui.js';
+import { apriNuovaScheda } from '../core/schede-ui.js';
 import { apriInvito, statoApp } from '../core/invito-ui.js';
 import { giorniDa, indiceGiorno } from '../../shared/progressi.js';
 import { GIORNI } from '../../shared/modello.js';
@@ -90,7 +91,9 @@ avvia(document.getElementById('app'), async ctx => {
   async function vistaAtleta(id) {
     const [atleta, programmi, sedute] = await Promise.all([ctx.api.leggiAtleta(id), ctx.api.programmi(id), ctx.api.sedute(id)]);
     const prog = programmaAttivo(programmi);
+    const bozze = programmi.filter(p => p.stato === 'bozza');
     const oggi = indiceGiorno();
+    const nuova = async () => { if (await apriNuovaScheda(ctx, atleta, programmi)) instrada(); };
     svuota(main,
       h('a', { href: '#atleti', class: 'gc-link', testo: '← Atleti' }),
       h('h1', { testo: atleta.nome, style: 'margin-top:10px' }),
@@ -100,7 +103,11 @@ avvia(document.getElementById('app'), async ctx => {
         h('span', { class: `gc-pill gc-pill-${statoApp(atleta).livello}`, testo: statoApp(atleta).etichetta }),
         h('button', { class: 'gc-btn gc-btn-piccolo', type: 'button', testo: atleta.accountAtleta ? 'Nuovo codice' : 'Invita all\u2019app', onclick: () => apriInvito(ctx, atleta, instrada) })
       ]),
-      prog ? h('h2', { testo: prog.nome }) : null,
+      h('div', { class: 'cp-schede-testa' }, [
+        h('h2', { testo: prog ? prog.nome : 'Scheda' }),
+        h('button', { class: 'gc-btn gc-btn-piccolo', type: 'button', testo: '+ Nuova scheda', onclick: nuova })
+      ]),
+      bozze.length ? h('p', { class: 'gc-tenue gc-piccolo', testo: `${bozze.length === 1 ? 'Una bozza' : bozze.length + ' bozze'} in preparazione: la modifichi e la attivi da Studio o Builder.` }) : null,
       prog ? h('div', { class: 'cp-lista' }, prog.scheda.sessioni.map(s => h('article', { class: 'cp-card' }, [
         h('div', { style: 'display:flex;justify-content:space-between;gap:10px;align-items:baseline' }, [
           h('strong', { style: 'font:800 1.3rem var(--gc-font-titoli);text-transform:uppercase', testo: s.nome }),
@@ -109,10 +116,8 @@ avvia(document.getElementById('app'), async ctx => {
         h('p', { class: 'gc-tenue', style: 'margin:0', testo: s.esercizi.map(e => e.nome).join(' · ') }),
         h('button', { class: 'gc-btn ' + (s.giornoSuggerito === oggi ? 'gc-btn-primario ' : '') + 'cp-grande', type: 'button', testo: 'Allena questa seduta', onclick: () => allena(atleta, prog, s) })
       ]))) : h('div', { class: 'cp-card' }, [
-        h('p', { style: 'margin:0', testo: 'Nessuna scheda attiva.' }),
-        h('button', { class: 'gc-btn gc-btn-primario cp-grande', type: 'button', testo: 'Prepara la scheda dal profilo', onclick: async () => {
-          await ctx.api.creaProgramma(atleta.id, bozzaProgramma(atleta, ctx.personali)); avviso('Scheda pronta'); instrada();
-        } })
+        h('p', { style: 'margin:0', testo: 'Nessuna scheda attiva: l\u2019atleta non ha ancora niente da seguire.' }),
+        h('button', { class: 'gc-btn gc-btn-primario cp-grande', type: 'button', testo: 'Crea scheda', onclick: nuova })
       ])
     );
   }

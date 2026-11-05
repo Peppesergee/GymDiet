@@ -1,5 +1,5 @@
-// Modalita' allenamento: un esercizio alla volta, carichi e ripetizioni con
-// + e -, carico suggerito dall'ultima seduta, timer di recupero.
+// Modalita' allenamento: un esercizio alla volta, carichi e ripetizioni da
+// digitare o con + e -, carico suggerito dall'ultima seduta, timer di recupero.
 // La usano il trainer in sala (Campo) e l'atleta dalla sua app: cambia solo
 // la funzione `salva`, che chiama l'API giusta.
 import { h, svuota, avviso } from './dom.js';
@@ -61,13 +61,34 @@ export function apriAllenamento({ titolo, seduta, programmaId, precedenti = [], 
     tick(); timer = setInterval(tick, 500);
   }
 
-  const stepper = (valore, passo, unita, alCambio) => {
-    const out = h('output', {}, [virgola(valore), h('small', { testo: unita })]);
-    const imposta = v => { valore = Math.max(0, Math.round(v * 10) / 10); out.firstChild.textContent = virgola(valore); alCambio(valore); };
+  // valore digitabile (tastiera numerica sul telefono) con + e - ai lati
+  let progressivo = 0;
+  const stepper = (valore, passo, unita, alCambio, { decimali = false, etichetta = unita } = {}) => {
+    const id = 'al-val-' + (++progressivo);
+    const arrotonda = v => Math.min(999, Math.max(0, decimali ? Math.round(v * 100) / 100 : Math.round(v)));
+    const input = h('input', {
+      class: 'al-valore', id, value: virgola(valore), type: 'text', autocomplete: 'off',
+      inputmode: decimali ? 'decimal' : 'numeric', enterkeyhint: 'done', 'aria-label': etichetta
+    });
+    const leggi = () => {
+      const n = parseFloat(input.value.replace(',', '.'));
+      return Number.isFinite(n) ? arrotonda(n) : null;
+    };
+    input.addEventListener('focus', () => input.select());
+    input.addEventListener('input', () => {
+      // solo cifre e un separatore decimale
+      const pulito = input.value.replace(decimali ? /[^0-9.,]/g : /[^0-9]/g, '');
+      if (pulito !== input.value) input.value = pulito;
+      const n = leggi();
+      if (n !== null) { valore = n; alCambio(valore); }
+    });
+    input.addEventListener('blur', () => { input.value = virgola(valore); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+    const imposta = v => { valore = arrotonda(v); input.value = virgola(valore); alCambio(valore); };
     return h('div', { class: 'al-stepper' }, [
-      h('button', { type: 'button', 'aria-label': `meno ${passo} ${unita}`, testo: '−', onclick: () => imposta(valore - passo) }),
-      out,
-      h('button', { type: 'button', 'aria-label': `piu' ${passo} ${unita}`, testo: '+', onclick: () => imposta(valore + passo) })
+      h('button', { type: 'button', 'aria-label': `meno ${virgola(passo)} ${unita}`, testo: '−', onclick: () => imposta(valore - passo) }),
+      h('label', { class: 'al-campo', for: id }, [input, h('small', { testo: unita })]),
+      h('button', { type: 'button', 'aria-label': `piu' ${virgola(passo)} ${unita}`, testo: '+', onclick: () => imposta(valore + passo) })
     ]);
   };
 
@@ -91,8 +112,8 @@ export function apriAllenamento({ titolo, seduta, programmaId, precedenti = [], 
       h('p', { class: 'al-consiglio', testo: d.sugg.testo + (d.prec ? ` (ultima volta: ${d.prec.serie.map(s => `${virgola(s.peso)}×${s.rip}`).join(', ')})` : '') }),
       ...d.serie.map((s, i) => h('div', { class: 'al-serie' }, [
         h('span', { class: 'n', testo: i + 1 }),
-        stepper(s.peso, 2.5, 'kg', v => { s.peso = v; }),
-        stepper(s.rip, 1, d.v.durata ? 'sec' : 'rip', v => { s.rip = v; }),
+        stepper(s.peso, 2.5, 'kg', v => { s.peso = v; }, { decimali: true, etichetta: `Serie ${i + 1}, chili` }),
+        stepper(s.rip, 1, d.v.durata ? 'sec' : 'rip', v => { s.rip = v; }, { etichetta: `Serie ${i + 1}, ${d.v.durata ? 'secondi' : 'ripetizioni'}` }),
         h('button', { class: 'al-fatto', type: 'button', 'aria-label': `Serie ${i + 1} fatta`, 'aria-pressed': String(s.fatto), testo: '✓', onclick: e => {
           s.fatto = !s.fatto; e.currentTarget.setAttribute('aria-pressed', String(s.fatto));
           if (s.fatto) {
