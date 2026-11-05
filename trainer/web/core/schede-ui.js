@@ -1,5 +1,4 @@
-// Creazione di una nuova scheda per un atleta: stesso pannello in Studio,
-// Campo e Builder. Il trainer sceglie da dove partire e se attivarla subito
+// Creazione di una nuova scheda per un atleta (Studio). Il trainer sceglie da dove partire e se attivarla subito
 // (l'atleta la vede) o tenerla come bozza da preparare con calma.
 import { h, finestra, avviso, dataBreve } from './dom.js';
 import { bozzaProgramma, programmaAttivo, messaggioErrore } from './servizi.js';

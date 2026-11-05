@@ -1,5 +1,5 @@
 /* Modalita' allenamento condivisa (core/allenamento-ui.js): la usano il
-   trainer in sala (Campo) e l'atleta dalla sua app. Solo token --gc-*. */
+   l'app atleta. Solo token --gc-*. */
 .al-grande { min-height: 56px; font-size: 1.1rem; border-radius: 14px; width: 100%; font-family: var(--gc-font-titoli); letter-spacing: .04em; font-weight: 800; }
 .al-note { width: 100%; min-height: 70px; border: 1px solid var(--gc-bordo); border-radius: 12px; padding: 10px 12px; background: var(--gc-superficie); color: var(--gc-testo); font: 1rem var(--gc-font); }
 .al-nota-trainer { background: color-mix(in srgb, var(--gc-accento) 10%, var(--gc-superficie)); border-radius: 12px; padding: 10px 12px; margin: 0; }

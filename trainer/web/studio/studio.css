@@ -168,3 +168,15 @@
 .st-aggiungi-giorno { display: grid; gap: 4px; place-content: center; text-align: center; min-height: 120px; border: 1px dashed var(--gc-bordo); border-radius: var(--gc-raggio); background: none; color: var(--gc-accento); cursor: pointer; }
 .st-aggiungi-giorno small { color: var(--gc-testo-2); }
 .st-aggiungi-giorno:hover { border-color: var(--gc-accento); }
+
+/* telefono: nome dell'esercizio per intero, parametri sotto */
+@media (max-width: 600px) {
+  .st-voce { grid-template-columns: 20px minmax(0, 1fr); }
+  .st-voce-nome strong { overflow: visible; text-overflow: clip; }
+  .st-param { grid-column: 2 / -1; }
+  .st-param input { width: 64px; }
+  .st-param input.rip { width: 84px; }
+  .st-strumenti { gap: 8px; }
+  .st-seduta .st-seduta-testa { flex-wrap: wrap; }
+  .st-nome-giorno { flex-basis: 100%; }
+}

@@ -3,10 +3,10 @@
 Versione multi-trainer di GymDiet, **solo allenamento** (dieta e macro tolte).
 Due app sullo stesso backend:
 
-- **Versione personal trainer**: il trainer gestisce i suoi atleti, crea e
-  modifica le loro schede, li invita all'app, vede i progressi.
-  Tre interfacce alternative: Studio, Campo, Builder.
-- **Versione atleta** (indirizzo separato, `/atleta/`): l'atleta entra con il
+- **Studio, l'app del personal trainer** (`/studio/`): il trainer gestisce i
+  suoi atleti, crea e modifica le loro schede, li invita all'app, vede i
+  progressi. Funziona da computer e da telefono.
+- **App atleta** (indirizzo separato, `/atleta/`): l'atleta entra con il
   codice ricevuto dal trainer, vede la scheda assegnata e registra gli
   allenamenti con carichi e ripetizioni.
 
@@ -22,9 +22,7 @@ trainer/
   web/
     core/        contratto API, adattatori, componenti comuni
                  (modalita' allenamento, invito, esercizi)
-    studio/      trainer, interfaccia 1: gestionale da scrivania
-    campo/       trainer, interfaccia 2: telefono in sala
-    builder/     trainer, interfaccia 3: editor di schede
+    studio/      app del personal trainer
     atleta/      app atleta
   server-a/      architettura A: monolite Node + SQLite, zero dipendenze
   supabase-b/    architettura B: Supabase (Postgres + Auth + RLS)
@@ -44,10 +42,6 @@ le sue schede (attiva, bozze, archiviate) e il pulsante **+ Nuova scheda**:
    sulla settimana, togli), esercizi (aggiungi, sostituisci, riordina, serie,
    ripetizioni, recupero, nota per l'atleta). **Salva**; per una bozza,
    **Attiva scheda** quando e' pronta.
-
-Lo stesso pannello "+ Nuova scheda" c'e' in Campo e nel Builder; dal Builder
-si puo' scegliere quale scheda modificare e una nuova scheda non sovrascrive
-mai quella aperta.
 
 ## Come entra l'atleta
 
@@ -140,13 +134,11 @@ progetto (la anon key è pubblica per design).
 | Pagamenti, notifiche, report | naturali nel server | funzioni e webhook |
 | Dati in UE (GDPR) | dove si installa il server | regione Francoforte |
 
-## Le interfacce
+## Le due app
 
 | | Per chi / quando | Punti di forza |
 |---|---|---|
-| **Studio** (trainer) | alla scrivania | atleti con stato (in regola / da sentire / senza scheda) e stato dell'app, tutte le schede dell'atleta con "+ Nuova scheda", bozze e attivazione, giorni ed esercizi modificabili, inviti, storico con grafici e sedute dell'atleta evidenziate |
-| **Campo** (trainer) | in sala con il telefono | agenda del giorno, un esercizio alla volta, carichi digitati o con +/−, timer di recupero |
-| **Builder** (trainer) | costruzione delle schede | libreria, trascina e riordina, note per l'atleta, anteprima di ciò che vede l'atleta |
+| **Studio** (trainer) | computer o telefono | atleti con stato (in regola / da sentire / senza scheda) e stato dell'app, tutte le schede dell'atleta con "+ Nuova scheda", bozze e attivazione, giorni ed esercizi modificabili, inviti, storico con grafici e sedute dell'atleta evidenziate |
 | **App atleta** | l'atleta, dal suo telefono | settimana con allenamenti fatti, seduta di oggi, scheda con "come si fa", allenamento guidato con kg e ripetizioni da tastiera (o +/−), progressi e costanza |
 
 ## Prima della produzione

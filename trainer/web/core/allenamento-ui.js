@@ -1,7 +1,6 @@
 // Modalita' allenamento: un esercizio alla volta, carichi e ripetizioni da
 // digitare o con + e -, carico suggerito dall'ultima seduta, timer di recupero.
-// La usano il trainer in sala (Campo) e l'atleta dalla sua app: cambia solo
-// la funzione `salva`, che chiama l'API giusta.
+// La usa l'app atleta; la funzione `salva` chiama l'API.
 import { h, svuota, avviso } from './dom.js';
 import { trova, messaggioErrore } from './servizi.js';
 import { apriSchedaTecnica } from './esercizi-ui.js';

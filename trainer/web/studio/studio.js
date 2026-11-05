@@ -222,7 +222,6 @@ avvia(document.getElementById('app'), async ctx => {
     const azioni = [
       corrente.stato !== 'attivo' ? h('button', { class: 'gc-btn gc-btn-primario', type: 'button', testo: corrente.stato === 'bozza' ? 'Attiva scheda' : 'Riattiva', onclick: attiva }) : null,
       corrente.stato === 'attivo' ? h('button', { class: 'gc-btn', type: 'button', testo: 'Registra seduta', onclick: () => registraSeduta(atleta, corrente, sedute) }) : null,
-      h('a', { class: 'gc-btn', href: `../builder/index.html#atleta-${atleta.id}`, testo: 'Apri nel Builder' }),
       corrente.stato !== 'attivo' ? h('button', { class: 'gc-btn', type: 'button', style: 'color:var(--gc-pericolo)', testo: 'Elimina', onclick: async () => {
         if (!await chiediConferma(`Eliminare la scheda "${corrente.nome}"? Le sedute gia’ registrate restano nello storico.`, { si: 'Elimina', pericolo: true })) return;
         await ctx.api.eliminaProgramma(corrente.id); delete selezione[atleta.id]; modificato = false; avviso('Scheda eliminata'); instrada();

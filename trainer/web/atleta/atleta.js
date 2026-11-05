@@ -86,7 +86,7 @@ function mostraAccesso() {
         modo = 'accesso'; aggiorna(); email.value = api.esempio.email; pw.value = api.esempio.password; form.requestSubmit();
       } }),
       h('p', { class: 'gc-tenue gc-piccolo', testo: 'Per provare il primo accesso: nell’app del trainer apri un atleta e premi "Invita all’app".' }),
-      h('a', { class: 'gc-link gc-piccolo', href: '../index.html', testo: 'Torna all’elenco delle interfacce' })
+      h('a', { class: 'gc-link gc-piccolo', href: '../studio/index.html', testo: 'Apri l’app del trainer (Studio)' })
     ]) : null
   ]));
 }

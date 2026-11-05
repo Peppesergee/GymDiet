@@ -77,7 +77,7 @@ export async function avvia(radice, monta) {
 function fasciaDemo(api) {
   return h('aside', { class: 'gc-demo' }, [
     h('span', { testo: 'Demo · dati di esempio salvati solo in questo browser' }),
-    h('a', { class: 'gc-link', href: '../index.html', testo: 'Altre interfacce' }),
+    h('a', { class: 'gc-link', href: '../atleta/index.html', testo: 'Apri l\u2019app atleta' }),
     h('button', {
       class: 'gc-link', type: 'button', testo: 'Ripristina',
       onclick: () => { api.ripristina(); avviso('Dati di esempio ripristinati'); setTimeout(() => location.reload(), 400); }
